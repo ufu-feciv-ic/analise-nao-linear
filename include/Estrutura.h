@@ -1,8 +1,10 @@
 #pragma once
 
-#include "raylib.h"
 #include <vector>
 #include <array>
+
+#include "raylib.h"
+#include "eigenpch.h"
 
 class No
 {
@@ -35,13 +37,18 @@ class Barra
 public:
     No noi;
     No nof;
-    float L;
+    float comprimento;
+    float modElast;
+    float area;
+    float inercia;
     float esp;
+    Eigen::Matrix<float, 6, 6> kLocal;
 
     Barra() = default;
-    Barra(No noi_, No nof_, float esp_);
+    Barra(No noi_, No nof_, float modElast_, float area_, float inercia_, float esp_);
 
     void draw(Camera2D camera);
+    void calculaMatrizRigidezLocal();
 };
 
 class Estrutura

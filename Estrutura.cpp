@@ -154,10 +154,20 @@ void No::drawApoios(float zoom)
 
 
 // Implementação da classe Barra
-Barra::Barra(No noi_, No nof_, float esp_) : noi(noi_), nof(nof_), esp(esp_)
+Barra::Barra(No noi_, No nof_, float modElast_, float area_, float inercia_, float esp_) 
+: noi(noi_), nof(nof_), modElast(modElast_), area(area_), inercia(inercia_), esp(esp_)
 {
-    L = sqrt(pow(nof.x - noi.x, 2) + pow(nof.y - noi.y, 2));
-    std::cout << "Comprimeto = " << L << std::endl;
+    comprimento = sqrt(pow(nof.x - noi.x, 2) + pow(nof.y - noi.y, 2));
+    kLocal = Eigen::Matrix<float, 6, 6>::Zero();
+    calculaMatrizRigidezLocal();
+
+    std::cout << modElast << std::endl;
+    std::cout << area << std::endl;
+    std::cout << inercia << std::endl;
+    std::cout << esp << std::endl;
+    std::cout << "Comprimeto = " << comprimento << std::endl;
+    std::cout << "Teste matriz kLocal = \n"
+              << kLocal << std::endl;
 }
 
 void Barra::draw(Camera2D camera)
@@ -165,13 +175,34 @@ void Barra::draw(Camera2D camera)
     DrawLineEx({noi.x, -noi.y}, {nof.x, -nof.y}, esp / camera.zoom, BLUE);
 }
 
+void Barra::calculaMatrizRigidezLocal()
+{
+    double EAL = modElast * area / comprimento;
+    double EIL = modElast * inercia / comprimento;
+    double EIL2 = modElast * inercia / (comprimento * comprimento);
+    double EIL3 = modElast * inercia / (comprimento * comprimento * comprimento);
+
+    kLocal << EAL, 0, 0, -EAL, 0, 0,
+              0, 12*EIL3, 6*EIL2, 0, -12*EIL3, 6*EIL2, 
+              0, 6*EIL2, 4*EIL, 0, -6*EIL2, 2*EIL,
+              -EAL, 0, 0, EAL, 0, 0,
+              0, -12*EIL3, -6*EIL2, 0, 12*EIL3, -6*EIL2,
+              0, 6*EIL2, 2*EIL, 0, -6*EIL2, 4*EIL;
+}
 
 // Implementação da classe Estrutura
 Estrutura::Estrutura (std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_) : nos(nos_), conexoes(conexoes_)
 {
+    float base = 0.1;
+    float altura = 0.2;
+    float area = base * altura;
+    float inercia = (base * pow(altura, 3)) / 12.0f;
+    float modElast = 2500E6;
+    float esp = 6;
+
     for (size_t i = 0; i < conexoes.size(); i++)
     {
-        barras.emplace_back(nos[conexoes[i][0]], nos[conexoes[i][1]], 6.0f);
+        barras.emplace_back(nos[conexoes[i][0]], nos[conexoes[i][1]], modElast, area, inercia, esp);
     }
 }
 
