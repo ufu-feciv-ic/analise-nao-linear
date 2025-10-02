@@ -6,6 +6,7 @@
 #include <cstring>
 #include "DesenhoUtils.h"
 #include "Estrutura.h"
+#include "RenderizadorEstrutura.h"
 
 int main()
 {
@@ -20,18 +21,42 @@ int main()
     camera.offset = {screenWidth / 2, screenHeight / 2};
     camera.target = {0, 0};
 
-    std::vector<No> nos;
-    nos.emplace_back(0.0f, 0.0f,0, 0, 0, true, false, true, camera);
-    nos.emplace_back(2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false, camera);
-    nos.emplace_back(6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false, camera);
-    nos.emplace_back(8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true, camera);
+    // std::vector<No> nos;
+    // nos.emplace_back(0.0f, 0.0f,0, 0, 0, true, false, true, camera);
+    // nos.emplace_back(2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false, camera);
+    // nos.emplace_back(6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false, camera);
+    // nos.emplace_back(8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true, camera);
 
-    std::vector<std::array<int, 2>> conexoes;
-    conexoes.push_back({0, 1});
-    conexoes.push_back({1, 2});
-    conexoes.push_back({2, 3});
+    // std::vector<std::array<int, 2>> conexoes;
+    // conexoes.push_back({0, 1});
+    // conexoes.push_back({1, 2});
+    // conexoes.push_back({2, 3});
 
-    Estrutura est(nos, conexoes);
+    // for (const auto &conexao : conexoes)
+    // {
+    //     std::cout << "Conexão entre nós: " << conexao[0] << " e " << conexao[1] << std::endl;
+    // }
+
+    // Estrutura est(nos, conexoes);
+
+    Estrutura est;
+    RenderizadorEstrutura renderizador;
+
+    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, false, true});
+    est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false});
+    est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
+    est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
+
+    float base = 0.1;
+    float altura = 0.2;
+    float area = base * altura;
+    float inercia = (base * pow(altura, 3)) / 12.0f;
+    float modElast = 200E9;
+    float espessura = 6;
+
+    est.adicionarBarra(0, 1, modElast, area, inercia, espessura);
+    est.adicionarBarra(1, 2, modElast, area, inercia, espessura);
+    est.adicionarBarra(2, 3, modElast, area, inercia, espessura);
 
     while (!WindowShouldClose())
     {
@@ -70,7 +95,9 @@ int main()
             BeginMode2D(camera);
                 DrawLineEx({ -(float)GetScreenWidth()/2, 0.0f}, { (float)GetScreenWidth()/2, 0.0f}, 3.0/camera.zoom, { 30, 30, 30, 255});
                 DrawLineEx({0.0f, -(float)GetScreenWidth()/2}, {0.0f, (float)GetScreenWidth()/2}, 3.0/camera.zoom, { 30, 30, 30, 255});
-                est.draw(camera);
+
+                // camada controladora do desenho 
+                renderizador.desenhaEstrutura(est, camera);
 
             EndMode2D();
         EndDrawing();
