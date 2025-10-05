@@ -57,6 +57,9 @@ int main()
     est.adicionarBarra(0, 1, modElast, area, inercia, espessura);
     est.adicionarBarra(1, 2, modElast, area, inercia, espessura);
     est.adicionarBarra(2, 3, modElast, area, inercia, espessura);
+    // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
+
+    est.calcularMatrizRigidezEstrutura();
 
     while (!WindowShouldClose())
     {
