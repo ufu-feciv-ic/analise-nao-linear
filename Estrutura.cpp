@@ -79,6 +79,28 @@ void Barra::calcularMatrizTransformacao()
          0, 0, 0, 0, 0, 1;
 }
 
+void Barra::calcularDeslocamentosGlobais(const Eigen::VectorXf &d, const std::array<int, 6> &bcn)
+{
+    int gln = 3;
+    int nos = 2;
+
+    for (int i = 0; i < gln*nos; i++)
+    {
+        vGlobal(i) = d(bcn[i]);
+    }
+}
+
+void Barra::calcularForcasGlobais()
+{
+    Fglobal = KGlobal * vGlobal;
+}
+
+void Barra::calcularEsforcosLocais()
+{
+    uLocal = T * vGlobal;
+    fLocal = kLocal * uLocal;
+}
+
 // Implementação da classe Estrutura
 Estrutura::Estrutura (std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_) : nos(nos_), conexoes(conexoes_)
 {
@@ -253,6 +275,21 @@ void Estrutura::resolverSistema()
         d = llt.solve(Pu);
         std::cout << "\nDeslocamentos d = \n"
                   << d << std::endl;
+
+        for (size_t n = 0; n < barras.size(); n++)
+        {
+            barras[n].calcularDeslocamentosGlobais(d, BCN[n]);
+            std::cout << "\nDeslocamentos globais da barra " << n << " = \n"
+                      << barras[n].vGlobal << std::endl;
+
+            barras[n].calcularForcasGlobais();
+            std::cout << "\nForças globais da barra " << n << " = \n"
+                      << barras[n].Fglobal << std::endl;
+
+            barras[n].calcularEsforcosLocais();
+            std::cout << "\nEsforços locais da barra " << n << " = \n"
+                      << barras[n].fLocal << std::endl;
+        }
     }
     else
     {

@@ -38,9 +38,13 @@ public:
     float area;
     float inercia;
     float esp;
-    Eigen::Matrix<float, 6, 6> kLocal;
-    Eigen::Matrix<float, 6, 6> KGlobal;
-    Eigen::Matrix<float, 6, 6> T;
+    Eigen::Matrix<float, 6, 6> kLocal; // matriz de rigidez local
+    Eigen::Matrix<float, 6, 6> KGlobal; // matriz de rigidez global
+    Eigen::Matrix<float, 6, 6> T; // matriz de transformação
+    Eigen::Matrix<float, 6, 1> vGlobal; // vetor de deslocamentos globais
+    Eigen::Matrix<float, 6, 1> Fglobal; // vetor de forças globais
+    Eigen::Matrix<float, 6, 1> uLocal; // vetor de deslocamentos locais
+    Eigen::Matrix<float, 6, 1> fLocal; // vetor de forças locais
 
     Barra() = default;
     // Barra(No noi_, No nof_, float modElast_, float area_, float inercia_, float esp_);
@@ -48,6 +52,9 @@ public:
 
     void calculaMatrizRigidezLocal();
     void calcularMatrizTransformacao();
+    void calcularDeslocamentosGlobais(const Eigen::VectorXf& d, const std::array<int, 6>& bcn);
+    void calcularForcasGlobais();
+    void calcularEsforcosLocais();
 };
 
 class Estrutura

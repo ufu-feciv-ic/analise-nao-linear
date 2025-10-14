@@ -10,6 +10,25 @@ void RenderizadorEstrutura::desenhaEstrutura(const Estrutura& est, Camera2D came
     }
 }
 
+void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala, Color cor)
+{
+    if (est.d.size() == 0)
+        return;
+    
+    for (const auto& barra : est.barras)
+    {
+        float dxi = barra.vGlobal(0);
+        float dyi = barra.vGlobal(1);
+        float dxf = barra.vGlobal(3);
+        float dyf = barra.vGlobal(4);
+
+        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, barra.noi.y + dyi * escala};
+        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, barra.nof.y + dyf * escala};
+
+        DrawLineV(posNoInicialDef, posNoFinalDef, cor);
+    }
+}
+
 void RenderizadorEstrutura::desenhaNo(const No& no, Camera2D camera)
 {
     desenhaApoios(no, camera.zoom);
