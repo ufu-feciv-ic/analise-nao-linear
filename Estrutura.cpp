@@ -176,3 +176,86 @@ void Estrutura::calcularMatrizRigidezEstrutura()
 
     std::cout << std::endl;
 }
+
+void Estrutura::montarVetorForcas()
+{
+    P.resize(nos.size() * 3);
+    P.setZero();
+
+    std::cout << "Montando vetor de forças P..." << std::endl;
+    std::cout << P << std::endl;
+
+    for (const auto& no : nos)
+    {
+        P(no.id * 3) = no.fx;
+        P(no.id * 3 + 1) = no.fy;
+        P(no.id * 3 + 2) = no.mz;
+    }
+
+    Pu = P;
+
+    std::cout << "\nVetor de forças P = \n"
+              << P << std::endl;
+}
+
+void Estrutura::aplicarCondicoesDeContorno()
+{
+    for (const auto& no : nos)
+    {
+        if (no.fixoX)
+        {
+            int gln = no.id * 3;
+            S.row(gln).setZero();
+            S.col(gln).setZero();
+            S(gln, gln) = 1.0f;
+            Pu(gln) = 0.0f;
+        }
+        if (no.fixoY)
+        {
+            int gln = no.id * 3 + 1;
+            S.row(gln).setZero();
+            S.col(gln).setZero();
+            S(gln, gln) = 1.0f;
+            Pu(gln) = 0.0f;
+        }
+        if (no.rotaZ)
+        {
+            int gln = no.id * 3 + 2;
+            S.row(gln).setZero();
+            S.col(gln).setZero();
+            S(gln, gln) = 1.0f;
+            Pu(gln) = 0.0f;
+        }
+    }
+
+    std::cout << "Matriz de rigidez global da estrutura S (após aplicar CC) = \n"
+              << S << std::endl;
+
+    std::cout << "\nVetor de forças P (após aplicar CC) = \n"
+                << Pu << std::endl;
+}
+
+void Estrutura::resolverSistema()
+{
+    calcularMatrizRigidezEstrutura();
+    montarVetorForcas();
+    aplicarCondicoesDeContorno();
+
+    Eigen::LLT<Eigen::MatrixXf> llt(S);
+
+    std::cout << "\nResolvendo sistema S * d = P..." << std::endl;
+
+    Eigen::MatrixXf L = llt.matrixL();
+    std::cout << "\nFatoração LLT de S = \n" << L << std::endl;
+
+    if (llt.info() == Eigen::Success)
+    {
+        d = llt.solve(Pu);
+        std::cout << "\nDeslocamentos d = \n"
+                  << d << std::endl;
+    }
+    else
+    {
+        std::cout << "Decomposição LLT falhou. A matriz pode não ser positiva definida." << std::endl;
+    }
+}

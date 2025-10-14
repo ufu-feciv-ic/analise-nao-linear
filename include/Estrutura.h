@@ -59,8 +59,11 @@ public:
     std::vector<std::array<int, 2>> conexoes;
     std::vector<Barra> barras;
     std::vector<std::array<int, 6>> BCN;
-    Eigen::MatrixXd S;
-    
+    Eigen::MatrixXf S;
+    Eigen::VectorXf P;
+    Eigen::VectorXf Pu;
+    Eigen::VectorXf d;
+
     Estrutura() = default;
     Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
 
@@ -70,4 +73,7 @@ public:
 
     void montarBCN();
     void calcularMatrizRigidezEstrutura();
+    void montarVetorForcas();
+    void aplicarCondicoesDeContorno();
+    void resolverSistema();
 };
