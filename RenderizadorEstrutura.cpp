@@ -1,4 +1,5 @@
 #include "RenderizadorEstrutura.h"
+#include <iostream>
 
 void RenderizadorEstrutura::desenhaEstrutura(const Estrutura& est, Camera2D camera)
 {
@@ -10,10 +11,12 @@ void RenderizadorEstrutura::desenhaEstrutura(const Estrutura& est, Camera2D came
     }
 }
 
-void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala, Color cor)
+void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala, Color cor, Camera2D camera)
 {
     if (est.d.size() == 0)
         return;
+
+    BeginMode2D(camera);
     
     for (const auto& barra : est.barras)
     {
@@ -22,10 +25,10 @@ void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala,
         float dxf = barra.vGlobal(3);
         float dyf = barra.vGlobal(4);
 
-        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, barra.noi.y + dyi * escala};
-        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, barra.nof.y + dyf * escala};
+        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, -barra.noi.y + dyi * escala};
+        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, -barra.nof.y + dyf * escala};
 
-        DrawLineV(posNoInicialDef, posNoFinalDef, cor);
+        DrawLineEx(posNoInicialDef, posNoFinalDef, 2.0f/camera.zoom, cor);
     }
 }
 

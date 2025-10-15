@@ -73,6 +73,23 @@ int main()
 
     est.resolverSistema();
 
+    float escala = 100.0f;
+
+    for (const auto& barra : est.barras)
+    {
+        float dxi = barra.vGlobal(0);
+        float dyi = barra.vGlobal(1);
+        float dxf = barra.vGlobal(3);
+        float dyf = barra.vGlobal(4);
+
+        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, barra.noi.y + dyi * escala};
+        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, barra.nof.y + dyf * escala};
+
+        std::cout << "Barra " << barra.noInicialId << "->" << barra.noFinalId << " deformada: (" 
+                  << posNoInicialDef.x << ", " << posNoInicialDef.y << ") -> ("
+                  << posNoFinalDef.x << ", " << posNoFinalDef.y << ")\n";
+    }
+
     while (!WindowShouldClose())
     {
         { // CAMERA
@@ -113,7 +130,7 @@ int main()
 
                 // camada controladora do desenho 
                 renderizador.desenhaEstrutura(est, camera);
-                renderizador.desenhaDeformada(est, 1.0f, RED);
+                renderizador.desenhaDeformada(est, 10e4, RED, camera);
 
             EndMode2D();
         EndDrawing();
