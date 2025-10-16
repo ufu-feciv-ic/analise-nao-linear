@@ -128,6 +128,12 @@ void Estrutura::adicionarBarra(int noiId, int nofId, float modElast_, float area
 {
     // poderíamos usar mapaNos[ID] para pegar o nó, mas aí teríamos que garantir que o nó existe
     // usando o at, uma exceção é lançada se o nó não existir
+    std::cout << "Construir a barra direto com o ponteiro para o No" << std::endl;
+
+    // for (enquanto o usuário clica)
+    // barra(nos[n do click], no2, );
+    // barras(no2, no3);
+
     const No& noi = mapaNos.at(noiId);
     const No& nof = mapaNos.at(nofId);
     barras.emplace_back(noi, nof, modElast_, area_, inercia_, esp_);
@@ -145,6 +151,8 @@ const No& Estrutura::getNoById(int id) const
 void Estrutura::montarBCN()
 {
     BCN.clear();
+
+    std::cout << "construir BCN sem usar o ID do nó, usar o índice do vetor" << std::endl;
 
     for (const auto& barra : barras)
     {
@@ -203,9 +211,18 @@ void Estrutura::montarVetorForcas()
 {
     P.resize(nos.size() * 3);
     P.setZero();
+    R.resize(nos.size() * 3);
+    R.setZero();
 
     std::cout << "Montando vetor de forças P..." << std::endl;
     std::cout << P << std::endl;
+
+    // for (size_t i = 0; i < nos.size(); i++)
+    // {
+    //     P(i * 3) = nos[i].fx;
+    //     P(i * 3 + 1) = nos[i].fy;
+    //     P(i * 3 + 2) = nos[i].mz;
+    // }
 
     for (const auto& no : nos)
     {
@@ -222,6 +239,10 @@ void Estrutura::montarVetorForcas()
 
 void Estrutura::aplicarCondicoesDeContorno()
 {
+
+    std::cout << "Parar de usar o ID do nó, usar o índice do vetor" << std::endl;
+    std::cout << "Nomes dos vetores e matrizes com e sem vínculos (0 e 1)" << std::endl; 
+
     for (const auto& no : nos)
     {
         if (no.fixoX)
@@ -289,7 +310,17 @@ void Estrutura::resolverSistema()
             barras[n].calcularEsforcosLocais();
             std::cout << "\nEsforços locais da barra " << n << " = \n"
                       << barras[n].fLocal << std::endl;
+
+            for (int i = 0; i < 6; i++)
+            {
+                R(BCN[n][i]) += barras[n].Fglobal(i);
+            }              
         }
+
+        R = R - P; // Este P não pode ter as forças entre os nós, somente aplicadas nos nos 
+        
+        std::cout << "\nReações de apoio da estrutura" << " = \n"
+                      << R << std::endl;  
     }
     else
     {

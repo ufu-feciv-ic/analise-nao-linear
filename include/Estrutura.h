@@ -70,6 +70,7 @@ public:
     Eigen::VectorXf P;
     Eigen::VectorXf Pu;
     Eigen::VectorXf d;
+    Eigen::VectorXf R;
 
     Estrutura() = default;
     Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);

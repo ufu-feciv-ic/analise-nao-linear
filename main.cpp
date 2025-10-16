@@ -42,18 +42,18 @@ int main()
     Estrutura est;
     RenderizadorEstrutura renderizador;
 
-    // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
-    // est.adicionarNo({2.0f, 0.0f, -2.3f, 3.8f, 15.0f, false, false, false});
+    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
+    est.adicionarNo({2.0f, 0.0f, -2.3f, 3.8f, 0.0f, false, false, false});
 
     // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, false, true});
     // est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false});
     // est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
     // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
 
-    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
-    est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, false, false, false});
-    est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, false, false});
-    est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, true, true, true});
+    // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
+    // est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, false, false, false});
+    // est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, false, false});
+    // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, true, true, true});
 
     float base = 0.1;
     float altura = 0.2;
@@ -63,8 +63,8 @@ int main()
     float espessura = 6;
 
     est.adicionarBarra(0, 1, modElast, area, inercia, espessura);
-    est.adicionarBarra(1, 2, modElast, area, inercia, espessura);
-    est.adicionarBarra(2, 3, modElast, area, inercia, espessura);
+    // est.adicionarBarra(1, 2, modElast, area, inercia, espessura);
+    // est.adicionarBarra(2, 3, modElast, area, inercia, espessura);
     // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
 
     // est.calcularMatrizRigidezEstrutura();
@@ -136,6 +136,11 @@ int main()
         EndDrawing();
 
     }
+
+    std::cout << "Fazer deformada" << std::endl;
+    std::cout << "Fazer reações de apoio" << std::endl;
+    std::cout << "Ver tabelas de carregamentos padrões" << std::endl;
+    
     CloseWindow();
     return 0;
 }
