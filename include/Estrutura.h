@@ -76,7 +76,7 @@ public:
     Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
 
     void adicionarNo(const No& no);
-    void adicionarBarra(int noiId, int nofId, float modElast_, float area_, float inercia_, float esp_);
+    void adicionarBarra(No noi_, No nof_, int noiId, int nofId, float modElast_, float area_, float inercia_, float esp_);
     const No& getNoById(int id) const;
 
     void montarBCN();

@@ -124,19 +124,20 @@ void Estrutura::adicionarNo(const No& no)
     mapaNos[no.id] = no;
 }
 
-void Estrutura::adicionarBarra(int noiId, int nofId, float modElast_, float area_, float inercia_, float esp_)
+void Estrutura::adicionarBarra(No noi_, No nof_, int noiId, int nofId, float modElast_, float area_, float inercia_, float esp_)
 {
     // poderíamos usar mapaNos[ID] para pegar o nó, mas aí teríamos que garantir que o nó existe
     // usando o at, uma exceção é lançada se o nó não existir
-    std::cout << "Construir a barra direto com o ponteiro para o No" << std::endl;
 
     // for (enquanto o usuário clica)
     // barra(nos[n do click], no2, );
     // barras(no2, no3);
 
-    const No& noi = mapaNos.at(noiId);
-    const No& nof = mapaNos.at(nofId);
-    barras.emplace_back(noi, nof, modElast_, area_, inercia_, esp_);
+    // const No& noi = mapaNos.at(noiId);
+    // const No& nof = mapaNos.at(nofId);
+    // barras.emplace_back(noi, nof, modElast_, area_, inercia_, esp_);
+
+    barras.emplace_back(noi_, nof_, modElast_, area_, inercia_, esp_);
 }
 
 // const No&, uma referência para o No e garantia que o nó não será modificado
@@ -251,7 +252,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
-            Pu(gln) = 0.0f;
+            P(gln) = 0.0f;
         }
         if (no.fixoY)
         {
@@ -259,7 +260,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
-            Pu(gln) = 0.0f;
+            P(gln) = 0.0f;
         }
         if (no.rotaZ)
         {
@@ -267,7 +268,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
-            Pu(gln) = 0.0f;
+            P(gln) = 0.0f;
         }
     }
 
@@ -275,7 +276,7 @@ void Estrutura::aplicarCondicoesDeContorno()
               << S << std::endl;
 
     std::cout << "\nVetor de forças P (após aplicar CC) = \n"
-                << Pu << std::endl;
+                << P << std::endl;
 }
 
 void Estrutura::resolverSistema()
@@ -293,7 +294,7 @@ void Estrutura::resolverSistema()
 
     if (llt.info() == Eigen::Success)
     {
-        d = llt.solve(Pu);
+        d = llt.solve(P);
         std::cout << "\nDeslocamentos d = \n"
                   << d << std::endl;
 
