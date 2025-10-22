@@ -91,22 +91,76 @@ void drawSeta(Vector2 psi, Vector2 psf, float esp, float compt, float zoom, Colo
     DrawTriangle({pt1.x, -pt1.y}, {pt2.x, -pt2.y}, {pt3.x, -pt3.y}, corSeta);
 }
 
-void drawForca(float x, float y, float fx, float fy, float zoom)
+// void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
+// {
+//     float angulo = atan2(fy, fx);
+//     Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
+//     Vector2 psi = {-fx + x - cosf(angulo) * (8 / zoom), -fy + y - sinf(angulo) * (8 / zoom)};
+//     drawSeta(psi, psf, 3.0f, 30.0f, zoom, cor);
+
+//     if (fx != 0 && fy != 0)
+//     {
+//         if (fx > 0 && fy < 0)
+//         {
+//             DrawTextEx(GetFontDefault(), TextFormat("(%.2f kN, %.2f kN)", fx, fy), {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (20.0f / zoom)}, 20.0f / zoom, 2.0f / zoom, cor);
+//         }
+//         else
+//         {
+//             DrawTextEx(GetFontDefault(), TextFormat("(%.2f kN, %.2f kN)", fx, fy), {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 20.0f / zoom, 2.0f / zoom, cor);
+//         }
+//     }
+// }
+
+void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
 {
+    // --- 1. Cálculo da Norma (Magnitude) ---
+    // Usamos o Teorema de Pitágoras para encontrar o "comprimento" do vetor.
+    // A função sqrtf() (square root float) vem da biblioteca <math.h>.
+    float norma = sqrtf(fx * fx + fy * fy);
+
+    // --- 2. Lógica Original (Cálculo da Seta) ---
+    // Mantemos os seus cálculos originais para os pontos da seta.
     float angulo = atan2(fy, fx);
     Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
     Vector2 psi = {-fx + x - cosf(angulo) * (8 / zoom), -fy + y - sinf(angulo) * (8 / zoom)};
-    drawSeta(psi, psf, 3.0f, 30.0f, zoom, RED);
+    
+    // (Assumindo que esta função já existe no seu código)
+    drawSeta(psi, psf, 3.0f, 30.0f, zoom, cor);
 
-    if (fx != 0 && fy != 0)
+    // --- 3. Correção do Texto (Desenhar a Norma) ---
+    
+    // Condição corrigida:
+    // Vamos desenhar o texto se a norma for maior que um valor muito pequeno
+    // (para evitar desenhar "0.00 kN" se a força for nula).
+    // A sua condição original (fx != 0 && fy != 0) não mostrava forças 
+    // puramente horizontais ou verticais.
+    if (norma > 0.001f)
     {
+        // Texto corrigido:
+        // Formatamos o texto para mostrar a 'norma' com 2 casas decimais.
+        const char *textoNorma = TextFormat("%.2f kN", norma);
+
+        // Posição do Texto (Lógica Original):
+        // Mantive a sua lógica original para posicionar o texto,
+        // que parece ajustar a posição dependendo do quadrante
+        // (e parece assumir um eixo Y invertido, com o uso de -psi.y).
         if (fx > 0 && fy < 0)
         {
-            DrawTextEx(GetFontDefault(), TextFormat("(%.2f kN, %.2f kN)", fx, fy), {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (20.0f / zoom)}, 20.0f / zoom, 2.0f / zoom, RED);
+            DrawTextEx(GetFontDefault(), 
+                       textoNorma, // <- MUDANÇA AQUI
+                       {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (20.0f / zoom)}, 
+                       20.0f / zoom, 
+                       2.0f / zoom, 
+                       cor);
         }
         else
         {
-            DrawTextEx(GetFontDefault(), TextFormat("(%.2f kN, %.2f kN)", fx, fy), {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 20.0f / zoom, 2.0f / zoom, RED);
+            DrawTextEx(GetFontDefault(), 
+                       textoNorma, // <- MUDANÇA AQUI
+                       {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
+                       20.0f / zoom, 
+                       2.0f / zoom, 
+                       cor);
         }
     }
 }

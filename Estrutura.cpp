@@ -101,6 +101,26 @@ void Barra::calcularEsforcosLocais()
     fLocal = kLocal * uLocal;
 }
 
+void Barra::calculaDeformadaLocal()
+{
+    float dx = comprimento / 20;
+
+    float x = 0;
+
+    for (int i = 0; i <= 20; i++)
+    {
+        float N1 = 1 - 3 * pow(x / comprimento, 2) + 2 * pow(x / comprimento, 3);
+        float N2 = x * pow((1 - x / comprimento), 2);
+        float N3 = 3 * pow(x / comprimento, 2) - 2 * pow(x / comprimento, 3);
+        float N4 = (x * x / comprimento) * (-1 + x / comprimento);
+
+        float uy = 0;
+        std::cout << "x = " << x << ", uy = " << uy << std::endl;
+
+        x += dx;
+    }
+}
+
 // Implementação da classe Estrutura
 Estrutura::Estrutura (std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_) : nos(nos_), conexoes(conexoes_)
 {

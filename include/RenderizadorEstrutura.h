@@ -19,4 +19,5 @@ private:
     void desenhaIndice(const No& no, float zoom);
     void desenhaApoios(const No& no, float zoom);
     void desenhaBarras(const Estrutura& est, Camera2D camera);
+    void desenhaReacoes(const Estrutura& est, Camera2D camera);
 };

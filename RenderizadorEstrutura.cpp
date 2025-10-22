@@ -9,6 +9,8 @@ void RenderizadorEstrutura::desenhaEstrutura(const Estrutura& est, Camera2D came
     {
         desenhaNo(no, camera);
     }
+
+    desenhaReacoes(est, camera);
 }
 
 void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala, Color cor, Camera2D camera)
@@ -36,7 +38,7 @@ void RenderizadorEstrutura::desenhaNo(const No& no, Camera2D camera)
 {
     desenhaApoios(no, camera.zoom);
     desenhaPonto(no, camera.zoom);
-    drawForca(no.x, no.y, no.fx, no.fy, camera.zoom);
+    drawForca(no.x, no.y, no.fx, no.fy, camera.zoom, RED);
     drawFixedSizeAnnotadedMoment({no.x, no.y}, no.mz, 18.0f, 10.0f, 6.0f, 3.0f, ORANGE, camera);
     desenhaIndice(no, camera.zoom);
 }
@@ -176,5 +178,32 @@ void RenderizadorEstrutura::desenhaBarras(const Estrutura& est, Camera2D camera)
         const No& noi = est.getNoById(barra.noInicialId);
         const No& nof = est.getNoById(barra.noFinalId);
         DrawLineEx({noi.x, -noi.y}, {nof.x, -nof.y}, esp / camera.zoom, BLUE);
+    }
+}
+
+void RenderizadorEstrutura::desenhaReacoes(const Estrutura &est, Camera2D camera)
+{
+    for (size_t i = 0; i < est.nos.size(); i++)
+    {
+        const No& no = est.nos[i];
+        float rx = 0.0f;
+        float ry = 0.0f;
+        float mz = 0.0f;
+
+        if (no.fixoX)
+        {
+            rx = est.R(i * 3);
+        }
+        if (no.fixoY)
+        {
+            ry = est.R(i * 3 + 1);
+        }
+        if (no.rotaZ)
+        {
+            mz = est.R(i * 3 + 2);
+        }
+
+        drawForca(no.x, no.y, rx, ry, camera.zoom, GREEN);
+        drawFixedSizeAnnotadedMoment({no.x, no.y}, mz, 18.0f, 10.0f, 6.0f, 3.0f, GREEN, camera);
     }
 }
