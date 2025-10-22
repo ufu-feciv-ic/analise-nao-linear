@@ -13,24 +13,58 @@ void RenderizadorEstrutura::desenhaEstrutura(const Estrutura& est, Camera2D came
     desenhaReacoes(est, camera);
 }
 
-void RenderizadorEstrutura::desenhaDeformada(const Estrutura &est, float escala, Color cor, Camera2D camera)
+void RenderizadorEstrutura::desenhaDeformada(Estrutura est, float escala, Color cor, Camera2D camera)
 {
-    if (est.d.size() == 0)
-        return;
+    // if (est.d.size() == 0)
+    //     return;
 
-    BeginMode2D(camera);
+    // BeginMode2D(camera);
     
+    // for (const auto& barra : est.barras)
+    // {
+    //     float dxi = barra.vGlobal(0);
+    //     float dyi = barra.vGlobal(1);
+    //     float dxf = barra.vGlobal(3);
+    //     float dyf = barra.vGlobal(4);
+
+    //     Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, -barra.noi.y - dyi * escala};
+    //     Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, -barra.nof.y - dyf * escala};
+
+    //     DrawLineEx(posNoInicialDef, posNoFinalDef, 2.0f/camera.zoom, cor);
+    // }
+
+    // for (const auto& barra : est.barras)
+    // {
+    //     if (barra.pontosDeformada.size() < 2)
+    //         continue;
+        
+    //     std::vector<Vector2> pontosDefRaylib;
+    //     pontosDefRaylib.reserve(barra.pontosDeformada.size());
+
+    //     for (const auto& ponto : barra.pontosDeformada)
+    //     {
+    //         pontosDefRaylib.push_back({ponto.first, -ponto.second});
+    //     }
+
+    //     DrawLineStrip(pontosDefRaylib.data(), (int)pontosDefRaylib.size(), cor);
+    // }
+
+    est.calcularPontosDeformadaEstrutura(escala);
+
     for (const auto& barra : est.barras)
     {
-        float dxi = barra.vGlobal(0);
-        float dyi = barra.vGlobal(1);
-        float dxf = barra.vGlobal(3);
-        float dyf = barra.vGlobal(4);
+        if (barra.pontosDeformada.size() < 2)
+            continue;
+        
+        std::vector<Vector2> pontosDefRaylib;
+        pontosDefRaylib.reserve(barra.pontosDeformada.size());
 
-        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, -barra.noi.y - dyi * escala};
-        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, -barra.nof.y - dyf * escala};
+        for (const auto& ponto : barra.pontosDeformada)
+        {
+            pontosDefRaylib.push_back({ponto.first, -ponto.second});
+        }
 
-        DrawLineEx(posNoInicialDef, posNoFinalDef, 2.0f/camera.zoom, cor);
+        DrawLineStrip(pontosDefRaylib.data(), (int)pontosDefRaylib.size(), cor);
     }
 }
 

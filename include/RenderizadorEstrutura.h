@@ -11,7 +11,7 @@ public:
     RenderizadorEstrutura() = default;
 
     void desenhaEstrutura(const Estrutura& est, Camera2D camera);
-    void desenhaDeformada(const Estrutura& est, float escala, Color cor, Camera2D camera);
+    void desenhaDeformada(Estrutura est, float escala, Color cor, Camera2D camera);
 
 private:
     void desenhaNo(const No& no, Camera2D camera);

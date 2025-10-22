@@ -22,9 +22,15 @@ Barra::Barra(const No& noi_, const No& nof_, float modElast_, float area_, float
 : noi(noi_), nof(nof_), noInicialId(noi_.id), noFinalId(nof_.id), modElast(modElast_), area(area_), inercia(inercia_), esp(esp_)
 {
     comprimento = sqrt(pow(nof.x - noi.x, 2) + pow(nof.y - noi.y, 2));
-    kLocal = Eigen::Matrix<float, 6, 6>::Zero();
-    T = Eigen::Matrix<float, 6, 6>::Zero();
-    KGlobal = Eigen::Matrix<float, 6, 6>::Zero();
+    
+    kLocal.setZero();
+    T.setZero();
+    KGlobal.setZero();
+
+    vGlobal.setZero();
+    Fglobal.setZero();
+    uLocal.setZero();
+    fLocal.setZero();
 
     calculaMatrizRigidezLocal();
     calcularMatrizTransformacao();
@@ -68,8 +74,8 @@ void Barra::calcularMatrizTransformacao()
 {
     float dx = nof.x - noi.x;
     float dy = nof.y - noi.y;
-    float cos = dx / comprimento;
-    float sen = dy / comprimento;
+    cos = dx / comprimento;
+    sen = dy / comprimento;
 
     T << cos, sen, 0, 0, 0, 0,
          -sen, cos, 0, 0, 0, 0,
@@ -101,24 +107,62 @@ void Barra::calcularEsforcosLocais()
     fLocal = kLocal * uLocal;
 }
 
-void Barra::calculaDeformadaLocal()
+void Barra::calculaDeformadaLocal(float fatorEscala)
 {
-    float dx = comprimento / 20;
+    pontosDeformada.clear();
 
-    float x = 0;
+    int numPontos = 20;
 
-    for (int i = 0; i <= 20; i++)
+    if (comprimento <= 0)
     {
-        float N1 = 1 - 3 * pow(x / comprimento, 2) + 2 * pow(x / comprimento, 3);
-        float N2 = x * pow((1 - x / comprimento), 2);
-        float N3 = 3 * pow(x / comprimento, 2) - 2 * pow(x / comprimento, 3);
-        float N4 = (x * x / comprimento) * (-1 + x / comprimento);
-
-        float uy = 0;
-        std::cout << "x = " << x << ", uy = " << uy << std::endl;
-
-        x += dx;
+        std::cout << "Comprimento da barra inválido!" << std::endl;
+        return;
     }
+
+    if (uLocal.size() != 6)
+    {
+        std::cout << "Vetor de deslocamentos locais não calculado!" << std::endl;
+        return;
+    }
+
+    float ui = uLocal(0); // deslocamento inicial no eixo x local
+    float vi = uLocal(1); // deslocamento inicial no eixo y local
+    float ti = uLocal(2); // rotação inicial no nó inicial
+    float uf = uLocal(3); // deslocamento final no eixo x local
+    float vf = uLocal(4); // deslocamento final no eixo y local
+    float tf = uLocal(5); // rotação final no nó final
+
+    for (int i = 0; i <= numPontos; i++)
+    {
+        float x = ((float) i / numPontos) * comprimento;
+
+        std::cout << "x = " << x << std::endl;
+
+        float xl = x / comprimento;
+
+        float N0 = 1.0f - xl;
+        float N1 = 1 - 3 * xl * xl + 2 * xl * xl * xl;
+        float N2 = x * (1 - xl) * (1 - xl);
+        float N3 = xl; 
+        float N4 = 3 * xl * xl - 2 * xl * xl * xl;
+        float N5 = x * x / comprimento * (xl - 1);
+
+        float ux = N0 * ui + N3 * uf;
+        float uy = N1 * vi + N2 * ti + N4 * vf + N5 * tf;
+
+        ux *= fatorEscala;
+        uy *= fatorEscala;
+
+        float xDefLocal = x + ux;
+        float yDefLocal = uy;
+
+        float xDefGlobal = noi.x + (cos * xDefLocal - sen * yDefLocal);
+        float yDefGlobal = noi.y + (sen * xDefLocal + cos * yDefLocal);
+
+        pontosDeformada.push_back({xDefGlobal, yDefGlobal});
+    }
+
+    std::cout << "Verificar fator de escala" << std::endl;
 }
 
 // Implementação da classe Estrutura
@@ -299,6 +343,14 @@ void Estrutura::aplicarCondicoesDeContorno()
                 << P << std::endl;
 }
 
+void Estrutura::calcularPontosDeformadaEstrutura(float fatorEscala)
+{
+    for (auto& barra : barras)
+    {
+        barra.calculaDeformadaLocal(fatorEscala);;
+    }
+}
+
 void Estrutura::resolverSistema()
 {
     calcularMatrizRigidezEstrutura();
@@ -341,7 +393,7 @@ void Estrutura::resolverSistema()
         R = R - P; // Este P não pode ter as forças entre os nós, somente aplicadas nos nos 
         
         std::cout << "\nReações de apoio da estrutura" << " = \n"
-                      << R << std::endl;  
+                      << R << std::endl;     
     }
     else
     {
