@@ -101,6 +101,25 @@ void RenderizadorEstrutura::desenhaPonto(const No& no, float zoom)
     DrawCircleV({no.x, -no.y}, 6 / zoom, {0, 235, 255, 255});    
 }
 
+void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float zoom)
+{
+    for (size_t i = 0; i < est.nos.size(); i++)
+    {
+        No no = est.nos[i];
+
+        float dx = est.d(3 * i);
+        float dy = est.d(3 * i + 1);
+
+        dx *= 10e4;
+        dy *= 10e4;
+
+        float xDef = no.x + dx;
+        float yDef = no.y + dy;
+
+        DrawCircleV({xDef, -yDef}, 6 / zoom, {255, 0, 0, 255});    
+    }    
+}
+
 void RenderizadorEstrutura::desenhaIndice(const No& no, float zoom)
 {
     DrawTextEx(GetFontDefault(), TextFormat("%i", no.id), {no.x + (10.0f / zoom), -no.y + (10.0f / zoom)}, 20.0f / zoom, 2.0f, {0, 235, 255, 255});

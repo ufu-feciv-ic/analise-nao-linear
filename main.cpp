@@ -46,11 +46,11 @@ int main()
     // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
     // est.adicionarNo({2.0f, 0.0f, -2.3f, 3.8f, 0.0f, false, false, false});
 
-    // Pórtico
-    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
-    est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false});
-    est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
-    est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
+    // // Pórtico
+    // est.adicionarNo({0.0f, 0.0f, 0, 5, 0, true, false, true});
+    // est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 5.0f, true, false, false});
+    // est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
+    // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
 
     // // Pórtico
     // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
@@ -59,16 +59,16 @@ int main()
     // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, true, true, true});
 
 
-    // // Viga biapoiada com carga no meio do vão
-    // est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
-    // est.adicionarNo({5.0f, 0.0f, 0.0f, -10.0f, 0, false, false, false});
-    // est.adicionarNo({10.0f, 0.0f, 0.0f, 0, 0, false, true, false});
+    // Viga biapoiada com carga no meio do vão
+    est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
+    est.adicionarNo({5.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({10.0f, 6.0f, 1000.0f, 0, 0, false, true, false});
 
     float base = 0.1;
     float altura = 0.2;
     float area = base * altura;
     float inercia = (base * pow(altura, 3)) / 12.0f;
-    float modElast = 205E9;
+    float modElast = 200E9;
     float espessura = 6;
 
     // Cria as conexões entre os nós em sequência
@@ -87,6 +87,7 @@ int main()
     // est.aplicarCondicoesDeContorno();
 
     est.resolverSistema();
+
     est.calcularPontosDeformadaEstrutura(20e4);
 
     float escalaMaxima = 10e4;
@@ -138,8 +139,18 @@ int main()
 
                 // camada controladora do desenho 
                 renderizador.desenhaEstrutura(est, camera);
-                //renderizador.desenhaDeformada(est, RED, camera);
-                renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);
+
+                if (IsKeyDown(KEY_SPACE))
+                {
+                    renderizador.desenhaDeformada(est, RED, camera);
+                }
+                
+                if (IsKeyDown(KEY_D))
+                {
+                    renderizador.desenhaPontoDeformada(est, camera.zoom);
+                }
+            
+                //renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);
 
             EndMode2D();
         EndDrawing();
