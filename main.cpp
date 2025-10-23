@@ -42,22 +42,27 @@ int main()
     Estrutura est;
     RenderizadorEstrutura renderizador;
 
+    // // Viga engastada
     // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
     // est.adicionarNo({2.0f, 0.0f, -2.3f, 3.8f, 0.0f, false, false, false});
 
-    // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, false, true});
-    // est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false});
-    // est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
-    // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
+    // Pórtico
+    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, true});
+    est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, true, false, false});
+    est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, true, false});
+    est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, false, false, true});
 
+    // // Pórtico
     // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
     // est.adicionarNo({2.0f, 8.0f, -2.3f, 3.8f, 15.0f, false, false, false});
     // est.adicionarNo({6.0f, 8.0f, 1.5f, -3.2f, 0.0f, false, false, false});
     // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, true, true, true});
 
-    est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
-    est.adicionarNo({5.0f, 0.0f, 0.0f, -10.0f, 0, false, false, false});
-    est.adicionarNo({10.0f, 0.0f, 0.0f, 0, 0, false, true, false});
+
+    // // Viga biapoiada com carga no meio do vão
+    // est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
+    // est.adicionarNo({5.0f, 0.0f, 0.0f, -10.0f, 0, false, false, false});
+    // est.adicionarNo({10.0f, 0.0f, 0.0f, 0, 0, false, true, false});
 
     float base = 0.1;
     float altura = 0.2;
@@ -82,24 +87,11 @@ int main()
     // est.aplicarCondicoesDeContorno();
 
     est.resolverSistema();
+    est.calcularPontosDeformadaEstrutura(20e4);
 
-    float escala = 100.0f;
-
-    for (const auto& barra : est.barras)
-    {
-        float dxi = barra.vGlobal(0);
-        float dyi = barra.vGlobal(1);
-        float dxf = barra.vGlobal(3);
-        float dyf = barra.vGlobal(4);
-
-        Vector2 posNoInicialDef = {barra.noi.x + dxi * escala, barra.noi.y + dyi * escala};
-        Vector2 posNoFinalDef = {barra.nof.x + dxf * escala, barra.nof.y + dyf * escala};
-
-        std::cout << "Barra " << barra.noInicialId << "->" << barra.noFinalId << " deformada: (" 
-                  << posNoInicialDef.x << ", " << posNoInicialDef.y << ") -> ("
-                  << posNoFinalDef.x << ", " << posNoFinalDef.y << ")\n";
-    }
-
+    float escalaMaxima = 10e4;
+    const float velocidadeAnimacao = 1.0f;
+    
     while (!WindowShouldClose())
     {
         { // CAMERA
@@ -132,6 +124,12 @@ int main()
             }
         }
 
+        float tempoAtual = (float)GetTime();
+
+        float fatorSenoidal = sinf(tempoAtual * velocidadeAnimacao);
+
+        float escalaAnimada = escalaMaxima * fatorSenoidal;
+
         BeginDrawing();
             ClearBackground({40, 40, 40, 255});
             BeginMode2D(camera);
@@ -140,7 +138,8 @@ int main()
 
                 // camada controladora do desenho 
                 renderizador.desenhaEstrutura(est, camera);
-                renderizador.desenhaDeformada(est, 10e4, RED, camera);
+                //renderizador.desenhaDeformada(est, RED, camera);
+                renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);
 
             EndMode2D();
         EndDrawing();

@@ -136,8 +136,6 @@ void Barra::calculaDeformadaLocal(float fatorEscala)
     {
         float x = ((float) i / numPontos) * comprimento;
 
-        std::cout << "x = " << x << std::endl;
-
         float xl = x / comprimento;
 
         float N0 = 1.0f - xl;
@@ -162,7 +160,7 @@ void Barra::calculaDeformadaLocal(float fatorEscala)
         pontosDeformada.push_back({xDefGlobal, yDefGlobal});
     }
 
-    std::cout << "Verificar fator de escala" << std::endl;
+    std::cout << "\nVerificar fator de escala" << std::endl;
 }
 
 // Implementação da classe Estrutura
@@ -218,6 +216,11 @@ void Estrutura::montarBCN()
     BCN.clear();
 
     std::cout << "construir BCN sem usar o ID do nó, usar o índice do vetor" << std::endl;
+
+    // for (int n = 0; n < (int)nos.size(); n++)
+    // {
+    //     BCN.push_back({n * 3, n * 3 + 1, n * 3 + 2, (n + 1) * 3, (n + 1) * 3 + 1, (n + 1) * 3 + 2});
+    // }
 
     for (const auto& barra : barras)
     {
@@ -289,12 +292,20 @@ void Estrutura::montarVetorForcas()
     //     P(i * 3 + 2) = nos[i].mz;
     // }
 
-    for (const auto& no : nos)
+    for (int n = 0; n < (int)nos.size(); n++)
     {
-        P(no.id * 3) = no.fx;
-        P(no.id * 3 + 1) = no.fy;
-        P(no.id * 3 + 2) = no.mz;
+        const auto& no = nos[n];
+        P(n * 3) = no.fx;
+        P(n * 3 + 1) = no.fy;
+        P(n * 3 + 2) = no.mz;
     }
+
+    // for (const auto& no : nos)
+    // {
+    //     P(no.id * 3) = no.fx;
+    //     P(no.id * 3 + 1) = no.fy;
+    //     P(no.id * 3 + 2) = no.mz;
+    // }
 
     Pu = P;
 
@@ -308,11 +319,12 @@ void Estrutura::aplicarCondicoesDeContorno()
     std::cout << "Parar de usar o ID do nó, usar o índice do vetor" << std::endl;
     std::cout << "Nomes dos vetores e matrizes com e sem vínculos (0 e 1)" << std::endl; 
 
-    for (const auto& no : nos)
+    for (int n = 0; n < (int)nos.size(); n++)
     {
+        const auto& no = nos[n];
         if (no.fixoX)
         {
-            int gln = no.id * 3;
+            int gln = n * 3;
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
@@ -320,7 +332,7 @@ void Estrutura::aplicarCondicoesDeContorno()
         }
         if (no.fixoY)
         {
-            int gln = no.id * 3 + 1;
+            int gln = n * 3 + 1;
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
@@ -328,13 +340,41 @@ void Estrutura::aplicarCondicoesDeContorno()
         }
         if (no.rotaZ)
         {
-            int gln = no.id * 3 + 2;
+            int gln = n * 3 + 2;
             S.row(gln).setZero();
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
             P(gln) = 0.0f;
         }
     }
+
+    // for (const auto& no : nos)
+    // {
+    //     if (no.fixoX)
+    //     {
+    //         int gln = no.id * 3;
+    //         S.row(gln).setZero();
+    //         S.col(gln).setZero();
+    //         S(gln, gln) = 1.0f;
+    //         P(gln) = 0.0f;
+    //     }
+    //     if (no.fixoY)
+    //     {
+    //         int gln = no.id * 3 + 1;
+    //         S.row(gln).setZero();
+    //         S.col(gln).setZero();
+    //         S(gln, gln) = 1.0f;
+    //         P(gln) = 0.0f;
+    //     }
+    //     if (no.rotaZ)
+    //     {
+    //         int gln = no.id * 3 + 2;
+    //         S.row(gln).setZero();
+    //         S.col(gln).setZero();
+    //         S(gln, gln) = 1.0f;
+    //         P(gln) = 0.0f;
+    //     }
+    // }
 
     std::cout << "Matriz de rigidez global da estrutura S (após aplicar CC) = \n"
               << S << std::endl;
