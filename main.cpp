@@ -70,6 +70,18 @@ int main()
     float inercia = (base * pow(altura, 3)) / 12.0f;
     float modElast = 200E9;
     float espessura = 6;
+    float forcaHorizontal = 100.0f;
+
+    // // Cria as conexões entre os nós em sequência
+    // for (size_t i = 0; i < est.nos.size() - 1; i++)
+    // {
+    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    // }
+
+    // est.adicionarBarra(est.nos[0], est.nos[1], 0, 1, modElast, area, inercia, espessura);
+    // est.adicionarBarra(est.nos[1], est.nos[2], 1, 2, modElast, area, inercia, espessura);
+    // est.adicionarBarra(est.nos[2], est.nos[3], 2, 3, modElast, area, inercia, espessura);
+    // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
 
     int numPilares = 4;
     int numAndares = 4;
@@ -106,12 +118,30 @@ int main()
             bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
             bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
 
-            No novoNo = No(xPos, yPos, 0, 0, 0, fixoX, fixoY, rotaZ);
+            float fx = 0.0f;
+            float fy = 0.0f;
+            float mz = 0.0f;
+
+            if (j == numAndares-1 && i == 0)
+            {
+                fx = forcaHorizontal;
+                std::cout << "Aplicando força horizontal de " << forcaHorizontal << " no nó superior esquerdo." << std::endl;
+            }
+
+            No novoNo = No(xPos, yPos, fx, fy, mz, fixoX, fixoY, rotaZ);
             est.adicionarNo(novoNo);
 
             idsNos[j][i] = novoNo.id;
         }
     }
+
+    for (int i = 0; i < est.nos.size(); i++)
+    {
+        const No& no = est.nos[i];
+        std::cout << "Nó ID: " << no.id << " - Posição: (" << no.x << ", " << no.y << ") - Fixações: (X: " << no.fixoX << ", Y: " << no.fixoY << ", Z: " << no.rotaZ << ")" << std::endl;
+        std::cout << "     Forças: (Fx: " << no.fx << ", Fy: " << no.fy << ", Mz: " << no.mz << ")" << std::endl;
+    }
+
 
     for (int i = 0; i < numPilares; i++)
     {
@@ -140,46 +170,6 @@ int main()
             est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
         }
     }
-    
-    
-
-    // for (int i = 0; i < numPilares - 1; i++)
-    // {
-    //     int noEsquerdoId = idsNos[2][i];
-    //     int noDireitoId = idsNos[2][i + 1];
-
-    //     const No& noEsquerdo = est.getNoById(noEsquerdoId);
-    //     const No& noDireito = est.getNoById(noDireitoId);
-
-    //     est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
-    // }
-
-    // for (int j = 1; j <= numAndares; j++) // Para cada andar
-    // {
-    //     for (int i = 0; i < numPilares - 1; i++) // Para cada vão entre pilares
-    //     {
-    //         int id_no_inicial = idsNos[j][i];
-    //         int id_no_final = idsNos[j][i + 1];
-
-    //         // Adiciona a barra (viga)
-    //         est.adicionarBarra(
-    //             est.getNoById(id_no_inicial), // Objeto No inicial
-    //             est.getNoById(id_no_final),   // Objeto No final
-    //             id_no_inicial, id_no_final,   // IDs
-    //             modElast, area, inercia, espessura);
-    //     }
-    // }
-
-    // // Cria as conexões entre os nós em sequência
-    // for (size_t i = 0; i < est.nos.size() - 1; i++)
-    // {
-    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
-    // }
-
-    // est.adicionarBarra(est.nos[0], est.nos[1], 0, 1, modElast, area, inercia, espessura);
-    // est.adicionarBarra(est.nos[1], est.nos[2], 1, 2, modElast, area, inercia, espessura);
-    // est.adicionarBarra(est.nos[2], est.nos[3], 2, 3, modElast, area, inercia, espessura);
-    // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
 
     // est.calcularMatrizRigidezEstrutura();
     // est.montarVetorForcas();
