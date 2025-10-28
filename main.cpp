@@ -59,10 +59,10 @@ int main()
     // est.adicionarNo({8.0f, 0.0f, -3.0f, -2.2f, -5.0f, true, true, true});
 
 
-    // Viga biapoiada com carga no meio do vão
-    est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
-    est.adicionarNo({5.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({10.0f, 6.0f, 1000.0f, 0, 0, false, true, false});
+    // // Viga biapoiada com carga no meio do vão
+    // est.adicionarNo({0.0f, 0.0f, 0, 0, 0, true, true, false});
+    // est.adicionarNo({5.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({10.0f, 6.0f, 1000.0f, 0, 0, false, true, false});
 
     float base = 0.1;
     float altura = 0.2;
@@ -71,11 +71,110 @@ int main()
     float modElast = 200E9;
     float espessura = 6;
 
-    // Cria as conexões entre os nós em sequência
-    for (size_t i = 0; i < est.nos.size() - 1; i++)
+    int numPilares = 4;
+    int numAndares = 4;
+    int espacamentPilares = 5;
+    int alturaAndar = 3;
+
+    std::vector<std::vector<int>> idsNos(numAndares + 1, std::vector<int>(numPilares));
+
+    // for (int i = 0; i < numPilares; i++)
+    // {
+    //     float xPos = i * espacamentPilares;
+
+    //     for (int j = 0; j < numAndares; j++)
+    //     {
+    //         float yPos = j * alturaAndar;
+
+    //         bool fixoX = (j == 0); // Fixar X apenas no primeiro andar
+    //         bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
+    //         bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
+
+    //         est.adicionarNo({xPos, yPos, 0, 0, 0, fixoX, fixoY, rotaZ});
+    //     }
+    // }
+
+    for (int j = 0; j < numAndares; j++)
     {
-        est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+        float yPos = j * alturaAndar;
+
+        for (int i = 0; i < numPilares; i++)
+        {
+            float xPos = i * espacamentPilares;
+
+            bool fixoX = (j == 0); // Fixar X apenas no primeiro andar
+            bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
+            bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
+
+            No novoNo = No(xPos, yPos, 0, 0, 0, fixoX, fixoY, rotaZ);
+            est.adicionarNo(novoNo);
+
+            idsNos[j][i] = novoNo.id;
+        }
     }
+
+    for (int i = 0; i < numPilares; i++)
+    {
+        for (int j = 0; j < numAndares - 1; j++)
+        {
+            int noInferiorId = idsNos[j][i];
+            int noSuperiorId = idsNos[j + 1][i];
+
+            const No& noInferior = est.getNoById(noInferiorId);
+            const No& noSuperior = est.getNoById(noSuperiorId);
+
+            est.adicionarBarra(noInferior, noSuperior, noInferiorId, noSuperiorId, modElast, area, inercia, espessura);
+        }
+    }
+
+    for (int j = 1; j < numAndares; j++)
+    {
+        for (int i = 0; i < numPilares - 1; i++)
+        {
+            int noEsquerdoId = idsNos[j][i];
+            int noDireitoId = idsNos[j][i + 1];
+
+            const No& noEsquerdo = est.getNoById(noEsquerdoId);
+            const No& noDireito = est.getNoById(noDireitoId);
+
+            est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
+        }
+    }
+    
+    
+
+    // for (int i = 0; i < numPilares - 1; i++)
+    // {
+    //     int noEsquerdoId = idsNos[2][i];
+    //     int noDireitoId = idsNos[2][i + 1];
+
+    //     const No& noEsquerdo = est.getNoById(noEsquerdoId);
+    //     const No& noDireito = est.getNoById(noDireitoId);
+
+    //     est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
+    // }
+
+    // for (int j = 1; j <= numAndares; j++) // Para cada andar
+    // {
+    //     for (int i = 0; i < numPilares - 1; i++) // Para cada vão entre pilares
+    //     {
+    //         int id_no_inicial = idsNos[j][i];
+    //         int id_no_final = idsNos[j][i + 1];
+
+    //         // Adiciona a barra (viga)
+    //         est.adicionarBarra(
+    //             est.getNoById(id_no_inicial), // Objeto No inicial
+    //             est.getNoById(id_no_final),   // Objeto No final
+    //             id_no_inicial, id_no_final,   // IDs
+    //             modElast, area, inercia, espessura);
+    //     }
+    // }
+
+    // // Cria as conexões entre os nós em sequência
+    // for (size_t i = 0; i < est.nos.size() - 1; i++)
+    // {
+    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    // }
 
     // est.adicionarBarra(est.nos[0], est.nos[1], 0, 1, modElast, area, inercia, espessura);
     // est.adicionarBarra(est.nos[1], est.nos[2], 1, 2, modElast, area, inercia, espessura);
@@ -137,7 +236,7 @@ int main()
                 DrawLineEx({ -(float)GetScreenWidth()/2, 0.0f}, { (float)GetScreenWidth()/2, 0.0f}, 3.0/camera.zoom, { 30, 30, 30, 255});
                 DrawLineEx({0.0f, -(float)GetScreenWidth()/2}, {0.0f, (float)GetScreenWidth()/2}, 3.0/camera.zoom, { 30, 30, 30, 255});
 
-                // camada controladora do desenho 
+                //camada controladora do desenho 
                 renderizador.desenhaEstrutura(est, camera);
 
                 if (IsKeyDown(KEY_SPACE))

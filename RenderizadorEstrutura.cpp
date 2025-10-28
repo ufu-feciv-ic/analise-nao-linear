@@ -110,8 +110,8 @@ void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float zoom)
         float dx = est.d(3 * i);
         float dy = est.d(3 * i + 1);
 
-        dx *= 10e4;
-        dy *= 10e4;
+        dx *= 20e4;
+        dy *= 20e4;
 
         float xDef = no.x + dx;
         float yDef = no.y + dy;
