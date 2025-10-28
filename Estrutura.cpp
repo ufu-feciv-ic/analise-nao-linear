@@ -217,16 +217,16 @@ void Estrutura::montarBCN()
 
     std::cout << "construir BCN sem usar o ID do nó, usar o índice do vetor" << std::endl;
 
-    for (int n = 0; n < (int)nos.size(); n++)
-    {
-        BCN.push_back({n * 3, n * 3 + 1, n * 3 + 2, (n + 1) * 3, (n + 1) * 3 + 1, (n + 1) * 3 + 2});
-    }
-
-    // for (const auto& barra : barras)
+    // for (int n = 0; n < (int)nos.size(); n++)
     // {
-    //     BCN.push_back({barra.noInicialId * 3, barra.noInicialId * 3 + 1, barra.noInicialId * 3 + 2,
-    //                    barra.noFinalId * 3, barra.noFinalId * 3 + 1, barra.noFinalId * 3 + 2});
+    //     BCN.push_back({n * 3, n * 3 + 1, n * 3 + 2, (n + 1) * 3, (n + 1) * 3 + 1, (n + 1) * 3 + 2});
     // }
+
+    for (const auto& barra : barras)
+    {
+        BCN.push_back({barra.noInicialId * 3, barra.noInicialId * 3 + 1, barra.noInicialId * 3 + 2,
+                       barra.noFinalId * 3, barra.noFinalId * 3 + 1, barra.noFinalId * 3 + 2});
+    }
 
     std::cout << "BCN = \n";
     for (const auto& linha : BCN)
