@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <cstring>
+#include <chrono>
 #include "DesenhoUtils.h"
 #include "Estrutura.h"
 #include "RenderizadorEstrutura.h"
@@ -83,8 +84,8 @@ int main()
     // est.adicionarBarra(est.nos[2], est.nos[3], 2, 3, modElast, area, inercia, espessura);
     // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
 
-    int numPilares = 4;
-    int numAndares = 4;
+    int numPilares = 15;
+    int numAndares = 55;
     int espacamentPilares = 5;
     int alturaAndar = 3;
 
@@ -125,7 +126,6 @@ int main()
             if (j == numAndares-1 && i == 0)
             {
                 fx = forcaHorizontal;
-                std::cout << "Aplicando força horizontal de " << forcaHorizontal << " no nó superior esquerdo." << std::endl;
             }
 
             No novoNo = No(xPos, yPos, fx, fy, mz, fixoX, fixoY, rotaZ);
@@ -135,13 +135,12 @@ int main()
         }
     }
 
-    for (int i = 0; i < est.nos.size(); i++)
-    {
-        const No& no = est.nos[i];
-        std::cout << "Nó ID: " << no.id << " - Posição: (" << no.x << ", " << no.y << ") - Fixações: (X: " << no.fixoX << ", Y: " << no.fixoY << ", Z: " << no.rotaZ << ")" << std::endl;
-        std::cout << "     Forças: (Fx: " << no.fx << ", Fy: " << no.fy << ", Mz: " << no.mz << ")" << std::endl;
-    }
-
+    // for (size_t i = 0; i < est.nos.size(); i++)
+    // {
+    //     const No& no = est.nos[i];
+    //     std::cout << "Nó ID: " << no.id << " - Posição: (" << no.x << ", " << no.y << ") - Fixações: (X: " << no.fixoX << ", Y: " << no.fixoY << ", Z: " << no.rotaZ << ")" << std::endl;
+    //     std::cout << "     Forças: (Fx: " << no.fx << ", Fy: " << no.fy << ", Mz: " << no.mz << ")" << std::endl;
+    // }
 
     for (int i = 0; i < numPilares; i++)
     {
@@ -174,10 +173,20 @@ int main()
     // est.calcularMatrizRigidezEstrutura();
     // est.montarVetorForcas();
     // est.aplicarCondicoesDeContorno();
+    //est.resolverSistema();
+    //est.calcularPontosDeformadaEstrutura(20e4);
 
+    auto startDenso = std::chrono::high_resolution_clock::now();
     est.resolverSistema();
+    auto endDenso = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationDenso = endDenso - startDenso;
+    std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << " ms." << std::endl;
 
-    est.calcularPontosDeformadaEstrutura(20e4);
+    auto startEsparso = std::chrono::high_resolution_clock::now();
+    est.resolverSistemaEsparsa();
+    auto endEsparso = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
+    std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << " ms." << std::endl;
 
     float escalaMaxima = 10e4;
     const float velocidadeAnimacao = 1.0f;
@@ -246,9 +255,9 @@ int main()
 
     }
 
-    std::cout << "Fazer deformada" << std::endl;
-    std::cout << "Fazer reações de apoio" << std::endl;
-    std::cout << "Ver tabelas de carregamentos padrões" << std::endl;
+    // std::cout << "Fazer deformada" << std::endl;
+    // std::cout << "Fazer reações de apoio" << std::endl;
+    // std::cout << "Ver tabelas de carregamentos padrões" << std::endl;
     
     CloseWindow();
     return 0;

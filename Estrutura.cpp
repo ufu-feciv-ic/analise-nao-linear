@@ -37,22 +37,22 @@ Barra::Barra(const No& noi_, const No& nof_, float modElast_, float area_, float
 
     KGlobal = T.transpose() * kLocal * T;
 
-    std::cout << "--- Nova Barra criada ---" << std::endl;
-    std::cout << "modElas: " << modElast << std::endl;
-    std::cout << "area: " << area << std::endl;
-    std::cout << "inercia:" << inercia << std::endl;
-    std::cout << "espessura: " << esp << std::endl;
-    std::cout << "Comprimeto = " << comprimento << std::endl;
-    std::cout << std::endl;
-    std::cout << "Teste matriz kLocal = \n"
-              << kLocal << std::endl;
-    std::cout << std::endl;
-    std::cout << "Matriz de transformação T = \n"
-              << T << std::endl;
-    std::cout << std::endl;
-    std::cout << "Matriz de rigidez global KGlobal = \n"
-              << KGlobal << std::endl;
-    std::cout << std::endl;
+    // std::cout << "--- Nova Barra criada ---" << std::endl;
+    // std::cout << "modElas: " << modElast << std::endl;
+    // std::cout << "area: " << area << std::endl;
+    // std::cout << "inercia:" << inercia << std::endl;
+    // std::cout << "espessura: " << esp << std::endl;
+    // std::cout << "Comprimeto = " << comprimento << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Teste matriz kLocal = \n"
+    //           << kLocal << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Matriz de transformação T = \n"
+    //           << T << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "Matriz de rigidez global KGlobal = \n"
+    //           << KGlobal << std::endl;
+    // std::cout << std::endl;
 }
 
 void Barra::calculaMatrizRigidezLocal()
@@ -160,7 +160,7 @@ void Barra::calculaDeformadaLocal(float fatorEscala)
         pontosDeformada.push_back({xDefGlobal, yDefGlobal});
     }
 
-    std::cout << "\nVerificar fator de escala" << std::endl;
+    // std::cout << "\nVerificar fator de escala" << std::endl;
 }
 
 // Implementação da classe Estrutura
@@ -215,7 +215,7 @@ void Estrutura::montarBCN()
 {
     BCN.clear();
 
-    std::cout << "construir BCN sem usar o ID do nó, usar o índice do vetor" << std::endl;
+    // std::cout << "construir BCN sem usar o ID do nó, usar o índice do vetor" << std::endl;
 
     // for (int n = 0; n < (int)nos.size(); n++)
     // {
@@ -228,16 +228,16 @@ void Estrutura::montarBCN()
                        barra.noFinalId * 3, barra.noFinalId * 3 + 1, barra.noFinalId * 3 + 2});
     }
 
-    std::cout << "BCN = \n";
-    for (const auto& linha : BCN)
-    {
-        for (const auto& valor : linha)
-        {
-            std::cout << valor << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    // std::cout << "BCN = \n";
+    // for (const auto& linha : BCN)
+    // {
+    //     for (const auto& valor : linha)
+    //     {
+    //         std::cout << valor << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << std::endl;
 }
 
 void Estrutura::calcularMatrizRigidezEstrutura()
@@ -269,10 +269,10 @@ void Estrutura::calcularMatrizRigidezEstrutura()
         }
     }
 
-    std::cout << "Matriz de rigidez global da estrutura S = \n"
-              << S << std::endl;
+    // std::cout << "Matriz de rigidez global da estrutura S = \n"
+    //           << S << std::endl;
 
-    std::cout << std::endl;
+    // std::cout << std::endl;
 }
 
 void Estrutura::montarVetorForcas()
@@ -282,8 +282,8 @@ void Estrutura::montarVetorForcas()
     R.resize(nos.size() * 3);
     R.setZero();
 
-    std::cout << "Montando vetor de forças P..." << std::endl;
-    std::cout << P << std::endl;
+    // std::cout << "Montando vetor de forças P..." << std::endl;
+    // std::cout << P << std::endl;
 
     // for (size_t i = 0; i < nos.size(); i++)
     // {
@@ -309,15 +309,15 @@ void Estrutura::montarVetorForcas()
 
     Pu = P;
 
-    std::cout << "\nVetor de forças P = \n"
-              << P << std::endl;
+    // std::cout << "\nVetor de forças P = \n"
+    //           << P << std::endl;
 }
 
 void Estrutura::aplicarCondicoesDeContorno()
 {
 
-    std::cout << "Parar de usar o ID do nó, usar o índice do vetor" << std::endl;
-    std::cout << "Nomes dos vetores e matrizes com e sem vínculos (0 e 1)" << std::endl; 
+    // std::cout << "Parar de usar o ID do nó, usar o índice do vetor" << std::endl;
+    // std::cout << "Nomes dos vetores e matrizes com e sem vínculos (0 e 1)" << std::endl; 
 
     for (int n = 0; n < (int)nos.size(); n++)
     {
@@ -376,11 +376,11 @@ void Estrutura::aplicarCondicoesDeContorno()
     //     }
     // }
 
-    std::cout << "Matriz de rigidez global da estrutura S (após aplicar CC) = \n"
-              << S << std::endl;
+    // std::cout << "Matriz de rigidez global da estrutura S (após aplicar CC) = \n"
+    //           << S << std::endl;
 
-    std::cout << "\nVetor de forças P (após aplicar CC) = \n"
-                << P << std::endl;
+    // std::cout << "\nVetor de forças P (após aplicar CC) = \n"
+    //             << P << std::endl;
 }
 
 void Estrutura::calcularPontosDeformadaEstrutura(float fatorEscala)
@@ -399,30 +399,30 @@ void Estrutura::resolverSistema()
 
     Eigen::LLT<Eigen::MatrixXf> llt(S);
 
-    std::cout << "\nResolvendo sistema S * d = P..." << std::endl;
+    // std::cout << "\nResolvendo sistema S * d = P..." << std::endl;
 
     Eigen::MatrixXf L = llt.matrixL();
-    std::cout << "\nFatoração LLT de S = \n" << L << std::endl;
+    // std::cout << "\nFatoração LLT de S = \n" << L << std::endl;
 
     if (llt.info() == Eigen::Success)
     {
         d = llt.solve(P);
-        std::cout << "\nDeslocamentos d = \n"
-                  << d << std::endl;
+        // std::cout << "\nDeslocamentos d = \n"
+        //           << d << std::endl;
 
         for (size_t n = 0; n < barras.size(); n++)
         {
             barras[n].calcularDeslocamentosGlobais(d, BCN[n]);
-            std::cout << "\nDeslocamentos globais da barra " << n << " = \n"
-                      << barras[n].vGlobal << std::endl;
+            // std::cout << "\nDeslocamentos globais da barra " << n << " = \n"
+            //           << barras[n].vGlobal << std::endl;
 
             barras[n].calcularForcasGlobais();
-            std::cout << "\nForças globais da barra " << n << " = \n"
-                      << barras[n].Fglobal << std::endl;
+            // std::cout << "\nForças globais da barra " << n << " = \n"
+            //           << barras[n].Fglobal << std::endl;
 
             barras[n].calcularEsforcosLocais();
-            std::cout << "\nEsforços locais da barra " << n << " = \n"
-                      << barras[n].fLocal << std::endl;
+            // std::cout << "\nEsforços locais da barra " << n << " = \n"
+            //           << barras[n].fLocal << std::endl;
 
             for (int i = 0; i < 6; i++)
             {
@@ -432,11 +432,242 @@ void Estrutura::resolverSistema()
 
         R = R - P; // Este P não pode ter as forças entre os nós, somente aplicadas nos nos 
         
-        std::cout << "\nReações de apoio da estrutura" << " = \n"
-                      << R << std::endl;     
+        // std::cout << "\nReações de apoio da estrutura" << " = \n"
+        //               << R << std::endl;     
     }
     else
     {
         std::cout << "Decomposição LLT falhou. A matriz pode não ser positiva definida." << std::endl;
     }
+}
+
+/**
+ * @brief Monta a matriz de rigidez global esparsa da estrutura (SSparse).
+ * * Documentação:
+ * Este método utiliza uma abordagem de "lista de tripletos" (Eigen::Triplet),
+ * que é a forma mais eficiente de construir uma matriz esparsa.
+ * 1. Um std::vector<Eigen::Triplet<float>> é criado.
+ * 2. Iteramos por todas as barras. Para cada barra, iteramos por sua matriz
+ * de rigidez global KGlobal (6x6).
+ * 3. Cada elemento (i, j) da KGlobal é mapeado para sua posição (linha, coluna)
+ * global na matriz SSparse usando o BCN (Beam Code Number).
+ * 4. Um "tripleto" (linha_global, coluna_global, valor) é criado e adicionado
+ * ao vetor para cada elemento da KGlobal.
+ * 5. Ao final, SSparse.setFromTriplets() é chamada. A Eigen processa essa
+ * lista, soma todos os valores que caem na mesma posição (linha, coluna),
+ * e constrói a matriz esparsa de forma otimizada.
+ */
+
+void Estrutura::calcularMatrizRigidezEstruturaEsparsa()
+{
+    int numGL = nos.size() * 3;
+    Sesparsa.resize(numGL, numGL);
+
+    std::vector<Eigen::Triplet<float>> tripletList;
+    tripletList.reserve(barras.size() * 36); // cada barra contribui com
+
+    montarBCN();
+
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        const auto& barra = barras[n];
+        const auto& bcn = BCN[n];
+
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                float valor = barra.KGlobal(i, j);
+                if (valor != 0.0f)
+                {
+                    tripletList.emplace_back(Eigen::Triplet<float>(bcn[i], bcn[j], valor));
+                }
+            }
+        }
+    }
+
+    Sesparsa.setFromTriplets(tripletList.begin(), tripletList.end());
+
+    // std::cout << "Matriz de rigidez global ESPARSA SSparse (NNZ: " << Sesparsa.nonZeros() << ") = \n"
+    //           << Sesparsa << std::endl;
+    // std::cout << std::endl;
+}
+
+/**
+ * @brief Aplica as condições de contorno (vínculos) à matriz esparsa (SSparse)
+ * e ao vetor de forças (P).
+ *
+ * Documentação:
+ * Esta função replica a lógica da versão densa, mas com operações em
+ * matrizes esparsas, que são mais complexas.
+ * 1. Garante que a matriz esteja em formato comprimido (para iteradores).
+ * 2. Itera por todos os nós.
+ * 3. Se um nó tem um vínculo (ex: fixoX no grau de liberdade 'gln'):
+ * a. Zera a força correspondente em P: P(gln) = 0.0f.
+ * b. Zera a coluna 'gln': Itera sobre os elementos não-nulos da
+ * coluna 'gln' (InnerIterator) e define seus valores para 0.
+ * c. Zera a linha 'gln': Itera sobre todas as colunas 'k'. Se o elemento
+ * (gln, k) existir (coeffRef != 0), define-o como 0.
+ * 4. Após zerar todas as linhas/colunas dos vínculos, iteramos novamente
+ * para definir o elemento da diagonal (gln, gln) como 1.0. Isso é
+ * feito em um segundo passo (ou no final de cada passo) para garantir
+ * que a diagonal não seja zerada por outra restrição.
+ * 5. SSparse.prune(0.0f) é chamada para remover fisicamente os elementos
+ * zero que foram explicitamente inseridos, mantendo a esparsidade.
+ */
+void Estrutura::aplicarCondicoesDeContornoEsparsa()
+{
+    // std::cout << "Aplicando condições de contorno na matriz ESPARSA..." << std::endl;
+
+    Sesparsa.makeCompressed();
+
+    for (int n = 0; n < (int)nos.size(); n++)
+    {
+        const auto& no = nos[n];
+        
+        if (no.fixoX)
+        {
+            int gln = n * 3;
+            P(gln) = 0.0f; // Zera vetor de força
+
+            for (Eigen::SparseMatrix<float>::InnerIterator it(Sesparsa, gln); it; ++it) 
+            {
+                it.valueRef() = 0.0f;
+            }
+    
+            for (int k = 0; k < Sesparsa.outerSize(); ++k) 
+            {
+                if (Sesparsa.coeffRef(gln, k) != 0)
+                    Sesparsa.coeffRef(gln, k) = 0.0f;
+            }
+        }
+
+        // 3b. Vínculo em Y
+        if (no.fixoY)
+        {
+            int gln = n * 3 + 1;
+            P(gln) = 0.0f;
+            
+            for (Eigen::SparseMatrix<float>::InnerIterator it(Sesparsa, gln); it; ++it) {
+                it.valueRef() = 0.0f;
+            }
+            for (int k = 0; k < Sesparsa.outerSize(); ++k) {
+                if (Sesparsa.coeffRef(gln, k) != 0)
+                    Sesparsa.coeffRef(gln, k) = 0.0f;
+            }
+        }
+
+        // 3c. Vínculo em Rotação Z
+        if (no.rotaZ)
+        {
+            int gln = n * 3 + 2;
+            P(gln) = 0.0f;
+            
+            for (Eigen::SparseMatrix<float>::InnerIterator it(Sesparsa, gln); it; ++it) {
+                it.valueRef() = 0.0f;
+            }
+            for (int k = 0; k < Sesparsa.outerSize(); ++k) {
+                if (Sesparsa.coeffRef(gln, k) != 0)
+                    Sesparsa.coeffRef(gln, k) = 0.0f;
+            }
+        }
+    }
+
+    // 4. Define as diagonais como 1 (após zerar linhas/colunas)
+    for (int n = 0; n < (int)nos.size(); n++)
+    {
+        const auto& no = nos[n];
+        if (no.fixoX) {
+            Sesparsa.coeffRef(n * 3, n * 3) = 1.0f;
+        }
+        if (no.fixoY) {
+            Sesparsa.coeffRef(n * 3 + 1, n * 3 + 1) = 1.0f;
+        }
+        if (no.rotaZ) {
+            Sesparsa.coeffRef(n * 3 + 2, n * 3 + 2) = 1.0f;
+        }
+    }
+
+    // 5. Remove os zeros explícitos da matriz
+    Sesparsa.prune(0.0f);
+
+    // std::cout << "Matriz Sesparsa (após CC) (NNZ: " << Sesparsa.nonZeros() << ") = \n"
+    //           << Sesparsa << std::endl;
+    // std::cout << "\nVetor P (após CC) = \n" << P << std::endl;
+}
+
+/**
+ * @brief Resolve o sistema linear esparso S*d = P.
+ *
+ * Documentação:
+ * 1. Chama os métodos para montar a matriz esparsa (SSparse) e o vetor
+ * de forças (P), e aplica as condições de contorno esparsas.
+ * 2. Escolhe um solver esparso. Como a matriz de rigidez é simétrica
+ * e positiva definida (se a estrutura for estável), usamos o
+ * `Eigen::SimplicialLDLT`. É o análogo esparso do `LLT` (Cholesky).
+ * 3. `solver.compute(SSparse)`: Analisa a estrutura da matriz (padrão
+ * de esparsidade) e calcula a decomposição.
+ * 4. `solver.solve(P)`: Resolve o sistema para encontrar o vetor de
+ * deslocamentos 'd'.
+ * 5. O restante da função (cálculo de deslocamentos, forças e reações
+ * nas barras) é idêntico à versão densa, pois apenas utiliza o
+ * vetor de resultado 'd' e o 'BCN'.
+ */
+void Estrutura::resolverSistemaEsparsa()
+{
+    calcularMatrizRigidezEstruturaEsparsa();
+    montarVetorForcas();
+    aplicarCondicoesDeContornoEsparsa();
+
+    // 2. Escolher e configurar o solver esparso
+    // SimplicialLDLT é bom para matrizes simétricas positivas definidas esparsas
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<float>> solver;
+    
+    // std::cout << "\nResolvendo sistema ESPARSO SSparse * d = P..." << std::endl;
+
+    // 3. Computar a decomposição
+    solver.compute(Sesparsa);
+
+    if (solver.info() != Eigen::Success)
+    {
+        std::cout << "Decomposição LDLT (Esparsa) falhou. A matriz pode ser singular." << std::endl;
+        return;
+    }
+
+    // 4. Resolver o sistema
+    d = solver.solve(P);
+
+    if (solver.info() != Eigen::Success)
+    {
+        std::cout << "Resolução do sistema (Esparsa) falhou." << std::endl;
+        return;
+    }
+
+    // std::cout << "\nDeslocamentos d = \n" << d << std::endl;
+
+    // 5. O restante é idêntico ao 'resolverSistema' denso
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        barras[n].calcularDeslocamentosGlobais(d, BCN[n]);
+        // std::cout << "\nDeslocamentos globais (esparso) da barra " << n << " = \n"
+        //           << barras[n].vGlobal << std::endl;
+
+        barras[n].calcularForcasGlobais();
+        // std::cout << "\nForças globais (esparso) da barra " << n << " = \n"
+        //           << barras[n].Fglobal << std::endl;
+
+        barras[n].calcularEsforcosLocais();
+        // std::cout << "\nEsforços locais (esparso) da barra " << n << " = \n"
+        //           << barras[n].fLocal << std::endl;
+
+        for (int i = 0; i < 6; i++)
+        {
+            R(BCN[n][i]) += barras[n].Fglobal(i);
+        }              
+    }
+
+    R = R - P; 
+    
+    // std::cout << "\nReações de apoio da estrutura (esparso)" << " = \n"
+    //               << R << std::endl;     
 }

@@ -120,9 +120,30 @@ void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float zoom)
     }    
 }
 
+// void RenderizadorEstrutura::desenhaIndice(const No& no, float zoom)
+// {
+//     DrawTextEx(GetFontDefault(), TextFormat("%i", no.id), {no.x + (4.0f / zoom), -no.y + (8.0f / zoom)}, 10.0f / zoom, 2.0f, {0, 235, 255, 255});
+// }
+
 void RenderizadorEstrutura::desenhaIndice(const No& no, float zoom)
 {
-    DrawTextEx(GetFontDefault(), TextFormat("%i", no.id), {no.x + (10.0f / zoom), -no.y + (10.0f / zoom)}, 20.0f / zoom, 2.0f, {0, 235, 255, 255});
+    // Prepara o texto e o tamanho da fonte
+    const char* textoId = TextFormat("%i", no.id);
+    float tamanhoFonte = 10.0f / zoom;
+    
+    // --- CORREÇÃO AQUI ---
+    // O espaçamento deve ser dividido pelo zoom, assim como a fonte.
+    float espacamento = 1.0f / zoom; // <--- MUDADO DE 1.0f
+
+    // Mede o tamanho que o texto ocupará no ecrã
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), textoId, tamanhoFonte, espacamento);
+    
+    // Calcula a Posição (centralizada acima do nó)
+    Vector2 textPos = { no.x - (textSize.x / 2), 
+                        -no.y - (8.0f / zoom) - textSize.y };
+
+    // Desenha o texto na posição calculada
+    DrawTextEx(GetFontDefault(), textoId, textPos, tamanhoFonte, espacamento, {0, 235, 255, 255});
 }
 
 void RenderizadorEstrutura::desenhaApoios(const No& no, float zoom)

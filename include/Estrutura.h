@@ -71,6 +71,7 @@ public:
     std::vector<Barra> barras;
     std::vector<std::array<int, 6>> BCN;
     Eigen::MatrixXf S;
+    Eigen::SparseMatrix<float> Sesparsa;
     Eigen::VectorXf P;
     Eigen::VectorXf Pu;
     Eigen::VectorXf d;
@@ -89,4 +90,8 @@ public:
     void aplicarCondicoesDeContorno();
     void calcularPontosDeformadaEstrutura(float fatorEscala);
     void resolverSistema();
+
+    void calcularMatrizRigidezEstruturaEsparsa();
+    void aplicarCondicoesDeContornoEsparsa();
+    void resolverSistemaEsparsa();
 };

@@ -111,57 +111,115 @@ void drawSeta(Vector2 psi, Vector2 psf, float esp, float compt, float zoom, Colo
 //     }
 // }
 
+// void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
+// {
+//     // --- 1. Cálculo da Norma (Magnitude) ---
+//     // Usamos o Teorema de Pitágoras para encontrar o "comprimento" do vetor.
+//     // A função sqrtf() (square root float) vem da biblioteca <math.h>.
+//     float norma = sqrtf(fx * fx + fy * fy);
+
+//     // --- 2. Lógica Original (Cálculo da Seta) ---
+//     // Mantemos os seus cálculos originais para os pontos da seta.
+//     float angulo = atan2(fy, fx);
+//     Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
+//     Vector2 psi = {-fx + x - cosf(angulo) * (8 / zoom), -fy + y - sinf(angulo) * (8 / zoom)};
+    
+//     // (Assumindo que esta função já existe no seu código)
+//     drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor);
+
+//     // --- 3. Correção do Texto (Desenhar a Norma) ---
+    
+//     // Condição corrigida:
+//     // Vamos desenhar o texto se a norma for maior que um valor muito pequeno
+//     // (para evitar desenhar "0.00 kN" se a força for nula).
+//     // A sua condição original (fx != 0 && fy != 0) não mostrava forças 
+//     // puramente horizontais ou verticais.
+//     if (norma > 0.001f)
+//     {
+//         // Texto corrigido:
+//         // Formatamos o texto para mostrar a 'norma' com 2 casas decimais.
+//         const char *textoNorma = TextFormat("%.2f kN", norma);
+
+//         // Posição do Texto (Lógica Original):
+//         // Mantive a sua lógica original para posicionar o texto,
+//         // que parece ajustar a posição dependendo do quadrante
+//         // (e parece assumir um eixo Y invertido, com o uso de -psi.y).
+//         if (fx > 0 && fy < 0)
+//         {
+//             DrawTextEx(GetFontDefault(), 
+//                        textoNorma, // <- MUDANÇA AQUI
+//                        {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (10.0f / zoom)}, 
+//                        10.0f / zoom, 
+//                        2.0f / zoom, 
+//                        cor);
+//         }
+//         else
+//         {
+//             DrawTextEx(GetFontDefault(), 
+//                        textoNorma, // <- MUDANÇA AQUI
+//                        {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
+//                        10.0f / zoom, 
+//                        2.0f / zoom, 
+//                        cor);
+//         }
+//     }
+// }
+
 void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
 {
     // --- 1. Cálculo da Norma (Magnitude) ---
     // Usamos o Teorema de Pitágoras para encontrar o "comprimento" do vetor.
-    // A função sqrtf() (square root float) vem da biblioteca <math.h>.
     float norma = sqrtf(fx * fx + fy * fy);
 
-    // --- 2. Lógica Original (Cálculo da Seta) ---
-    // Mantemos os seus cálculos originais para os pontos da seta.
+    // Se a força for (quase) zero, não desenha nada
+    if (norma < 0.001f) return;
+
+    // --- 2. [NOVO] Fator de Escala Visual ---
+    // Este fator converte a magnitude (ex: 100.0) para unidades do mundo (ex: 2.0)
+    // Ajuste este valor para mudar o comprimento das setas
+    float escalaVisual = 0.02f; 
+    float fx_vis = fx * escalaVisual; // Força visual em X
+    float fy_vis = fy * escalaVisual; // Força visual em Y
+
+    // --- 3. Cálculo da Seta (Modificado) ---
+    // Usamos o ângulo original da força para manter a direção correta
     float angulo = atan2(fy, fx);
+    
+    // Ponto final da seta (psf) - perto do nó
     Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
-    Vector2 psi = {-fx + x - cosf(angulo) * (8 / zoom), -fy + y - sinf(angulo) * (8 / zoom)};
     
-    // (Assumindo que esta função já existe no seu código)
-    drawSeta(psi, psf, 3.0f, 30.0f, zoom, cor);
+    // Ponto inicial da seta (psi) - USA AS FORÇAS VISUAIS (escaladas)
+    Vector2 psi = {-fx_vis + x - cosf(angulo) * (8 / zoom), -fy_vis + y - sinf(angulo) * (8 / zoom)};
+    
+    // Desenha a seta (com a ponta de 12.0f, como sugerido na resposta anterior)
+    drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor); //
 
-    // --- 3. Correção do Texto (Desenhar a Norma) ---
+    // --- 4. Desenho do Texto (Corrigido para 'norma' e tamanho 10) ---
+    // O texto mostra a 'norma' (valor real), não a força visual.
     
-    // Condição corrigida:
-    // Vamos desenhar o texto se a norma for maior que um valor muito pequeno
-    // (para evitar desenhar "0.00 kN" se a força for nula).
-    // A sua condição original (fx != 0 && fy != 0) não mostrava forças 
-    // puramente horizontais ou verticais.
-    if (norma > 0.001f)
+    const char *textoNorma = TextFormat("%.2f kN", norma);
+    float tamanhoFonte = 10.0f / zoom;
+    float espacamento = 1.0f / zoom;
+
+    // Lógica original de posicionamento do texto
+    if (fx > 0 && fy < 0)
     {
-        // Texto corrigido:
-        // Formatamos o texto para mostrar a 'norma' com 2 casas decimais.
-        const char *textoNorma = TextFormat("%.2f kN", norma);
-
-        // Posição do Texto (Lógica Original):
-        // Mantive a sua lógica original para posicionar o texto,
-        // que parece ajustar a posição dependendo do quadrante
-        // (e parece assumir um eixo Y invertido, com o uso de -psi.y).
-        if (fx > 0 && fy < 0)
-        {
-            DrawTextEx(GetFontDefault(), 
-                       textoNorma, // <- MUDANÇA AQUI
-                       {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (20.0f / zoom)}, 
-                       20.0f / zoom, 
-                       2.0f / zoom, 
-                       cor);
-        }
-        else
-        {
-            DrawTextEx(GetFontDefault(), 
-                       textoNorma, // <- MUDANÇA AQUI
-                       {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
-                       20.0f / zoom, 
-                       2.0f / zoom, 
-                       cor);
-        }
+        DrawTextEx(GetFontDefault(), 
+                   textoNorma,
+                   // Offset ajustado para a nova fonte (10.0f)
+                   {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (10.0f / zoom)}, 
+                   tamanhoFonte, 
+                   espacamento, 
+                   cor);
+    }
+    else
+    {
+        DrawTextEx(GetFontDefault(), 
+                   textoNorma,
+                   {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
+                   tamanhoFonte, 
+                   espacamento, 
+                   cor);
     }
 }
 
