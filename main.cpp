@@ -65,6 +65,19 @@ int main()
     // est.adicionarNo({5.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({10.0f, 6.0f, 1000.0f, 0, 0, false, true, false});
 
+    // Pilar engastado
+    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
+    est.adicionarNo({0.0f, 1.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 2.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 4.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 5.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 6.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 7.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 8.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 9.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 10.0f, 0.0f, -10.0f, 0.0f, true, false, false});
+
     float base = 0.1;
     float altura = 0.2;
     float area = base * altura;
@@ -73,102 +86,106 @@ int main()
     float espessura = 6;
     float forcaHorizontal = 100.0f;
 
-    // // Cria as conexões entre os nós em sequência
-    // for (size_t i = 0; i < est.nos.size() - 1; i++)
-    // {
-    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
-    // }
+
+    // Cria as conexões entre os nós em sequência
+    for (size_t i = 0; i < est.nos.size() - 1; i++)
+    {
+        est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    }
+
+    est.resolverSistema();
+    est.calcularPontosDeformadaEstrutura(20e4);
 
     // est.adicionarBarra(est.nos[0], est.nos[1], 0, 1, modElast, area, inercia, espessura);
     // est.adicionarBarra(est.nos[1], est.nos[2], 1, 2, modElast, area, inercia, espessura);
     // est.adicionarBarra(est.nos[2], est.nos[3], 2, 3, modElast, area, inercia, espessura);
     // est.adicionarBarra(3, 0, modElast, area, inercia, espessura);
 
-    int numPilares = 15;
-    int numAndares = 55;
-    int espacamentPilares = 5;
-    int alturaAndar = 3;
+    // int numPilares = 15;
+    // int numAndares = 55;
+    // int espacamentPilares = 5;
+    // int alturaAndar = 3;
 
-    std::vector<std::vector<int>> idsNos(numAndares + 1, std::vector<int>(numPilares));
+    // std::vector<std::vector<int>> idsNos(numAndares + 1, std::vector<int>(numPilares));
 
-    // for (int i = 0; i < numPilares; i++)
+    // // for (int i = 0; i < numPilares; i++)
+    // // {
+    // //     float xPos = i * espacamentPilares;
+
+    // //     for (int j = 0; j < numAndares; j++)
+    // //     {
+    // //         float yPos = j * alturaAndar;
+
+    // //         bool fixoX = (j == 0); // Fixar X apenas no primeiro andar
+    // //         bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
+    // //         bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
+
+    // //         est.adicionarNo({xPos, yPos, 0, 0, 0, fixoX, fixoY, rotaZ});
+    // //     }
+    // // }
+
+    // for (int j = 0; j < numAndares; j++)
     // {
-    //     float xPos = i * espacamentPilares;
+    //     float yPos = j * alturaAndar;
 
-    //     for (int j = 0; j < numAndares; j++)
+    //     for (int i = 0; i < numPilares; i++)
     //     {
-    //         float yPos = j * alturaAndar;
+    //         float xPos = i * espacamentPilares;
 
     //         bool fixoX = (j == 0); // Fixar X apenas no primeiro andar
     //         bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
     //         bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
 
-    //         est.adicionarNo({xPos, yPos, 0, 0, 0, fixoX, fixoY, rotaZ});
+    //         float fx = 0.0f;
+    //         float fy = 0.0f;
+    //         float mz = 0.0f;
+
+    //         if (j == numAndares-1 && i == 0)
+    //         {
+    //             fx = forcaHorizontal;
+    //         }
+
+    //         No novoNo = No(xPos, yPos, fx, fy, mz, fixoX, fixoY, rotaZ);
+    //         est.adicionarNo(novoNo);
+
+    //         idsNos[j][i] = novoNo.id;
     //     }
     // }
 
-    for (int j = 0; j < numAndares; j++)
-    {
-        float yPos = j * alturaAndar;
+    // // for (size_t i = 0; i < est.nos.size(); i++)
+    // // {
+    // //     const No& no = est.nos[i];
+    // //     std::cout << "Nó ID: " << no.id << " - Posição: (" << no.x << ", " << no.y << ") - Fixações: (X: " << no.fixoX << ", Y: " << no.fixoY << ", Z: " << no.rotaZ << ")" << std::endl;
+    // //     std::cout << "     Forças: (Fx: " << no.fx << ", Fy: " << no.fy << ", Mz: " << no.mz << ")" << std::endl;
+    // // }
 
-        for (int i = 0; i < numPilares; i++)
-        {
-            float xPos = i * espacamentPilares;
-
-            bool fixoX = (j == 0); // Fixar X apenas no primeiro andar
-            bool fixoY = (j == 0); // Fixar Y apenas no primeiro andar
-            bool rotaZ = (j == 0); // Fixar rotação apenas no primeiro andar
-
-            float fx = 0.0f;
-            float fy = 0.0f;
-            float mz = 0.0f;
-
-            if (j == numAndares-1 && i == 0)
-            {
-                fx = forcaHorizontal;
-            }
-
-            No novoNo = No(xPos, yPos, fx, fy, mz, fixoX, fixoY, rotaZ);
-            est.adicionarNo(novoNo);
-
-            idsNos[j][i] = novoNo.id;
-        }
-    }
-
-    // for (size_t i = 0; i < est.nos.size(); i++)
+    // for (int i = 0; i < numPilares; i++)
     // {
-    //     const No& no = est.nos[i];
-    //     std::cout << "Nó ID: " << no.id << " - Posição: (" << no.x << ", " << no.y << ") - Fixações: (X: " << no.fixoX << ", Y: " << no.fixoY << ", Z: " << no.rotaZ << ")" << std::endl;
-    //     std::cout << "     Forças: (Fx: " << no.fx << ", Fy: " << no.fy << ", Mz: " << no.mz << ")" << std::endl;
+    //     for (int j = 0; j < numAndares - 1; j++)
+    //     {
+    //         int noInferiorId = idsNos[j][i];
+    //         int noSuperiorId = idsNos[j + 1][i];
+
+    //         const No& noInferior = est.getNoById(noInferiorId);
+    //         const No& noSuperior = est.getNoById(noSuperiorId);
+
+    //         est.adicionarBarra(noInferior, noSuperior, noInferiorId, noSuperiorId, modElast, area, inercia, espessura);
+    //     }
     // }
 
-    for (int i = 0; i < numPilares; i++)
-    {
-        for (int j = 0; j < numAndares - 1; j++)
-        {
-            int noInferiorId = idsNos[j][i];
-            int noSuperiorId = idsNos[j + 1][i];
+    // for (int j = 1; j < numAndares; j++)
+    // {
+    //     for (int i = 0; i < numPilares - 1; i++)
+    //     {
+    //         int noEsquerdoId = idsNos[j][i];
+    //         int noDireitoId = idsNos[j][i + 1];
 
-            const No& noInferior = est.getNoById(noInferiorId);
-            const No& noSuperior = est.getNoById(noSuperiorId);
+    //         const No& noEsquerdo = est.getNoById(noEsquerdoId);
+    //         const No& noDireito = est.getNoById(noDireitoId);
 
-            est.adicionarBarra(noInferior, noSuperior, noInferiorId, noSuperiorId, modElast, area, inercia, espessura);
-        }
-    }
-
-    for (int j = 1; j < numAndares; j++)
-    {
-        for (int i = 0; i < numPilares - 1; i++)
-        {
-            int noEsquerdoId = idsNos[j][i];
-            int noDireitoId = idsNos[j][i + 1];
-
-            const No& noEsquerdo = est.getNoById(noEsquerdoId);
-            const No& noDireito = est.getNoById(noDireitoId);
-
-            est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
-        }
-    }
+    //         est.adicionarBarra(noEsquerdo, noDireito, noEsquerdoId, noDireitoId, modElast, area, inercia, espessura);
+    //     }
+    // }
 
     // est.calcularMatrizRigidezEstrutura();
     // est.montarVetorForcas();
@@ -176,20 +193,20 @@ int main()
     //est.resolverSistema();
     //est.calcularPontosDeformadaEstrutura(20e4);
 
-    auto startDenso = std::chrono::high_resolution_clock::now();
-    est.resolverSistema();
-    auto endDenso = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationDenso = endDenso - startDenso;
-    std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << " ms." << std::endl;
+    // auto startDenso = std::chrono::high_resolution_clock::now();
+    // est.resolverSistema();
+    // auto endDenso = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> durationDenso = endDenso - startDenso;
+    // std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << std::endl;
 
-    auto startEsparso = std::chrono::high_resolution_clock::now();
-    est.resolverSistemaEsparsa();
-    auto endEsparso = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
-    std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << " ms." << std::endl;
+    // auto startEsparso = std::chrono::high_resolution_clock::now();
+    // est.resolverSistemaEsparsa();
+    // auto endEsparso = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
+    // std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << std::endl;
 
-    float escalaMaxima = 10e4;
-    const float velocidadeAnimacao = 1.0f;
+    // float escalaMaxima = 10e4;
+    // const float velocidadeAnimacao = 1.0f;
     
     while (!WindowShouldClose())
     {
@@ -223,11 +240,11 @@ int main()
             }
         }
 
-        float tempoAtual = (float)GetTime();
+        // float tempoAtual = (float)GetTime();
 
-        float fatorSenoidal = sinf(tempoAtual * velocidadeAnimacao);
+        // float fatorSenoidal = sinf(tempoAtual * velocidadeAnimacao);
 
-        float escalaAnimada = escalaMaxima * fatorSenoidal;
+        // float escalaAnimada = escalaMaxima * fatorSenoidal;
 
         BeginDrawing();
             ClearBackground({40, 40, 40, 255});

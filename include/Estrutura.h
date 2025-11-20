@@ -42,6 +42,8 @@ public:
     float sen;
     Eigen::Matrix<float, 6, 6> kLocal; // matriz de rigidez local
     Eigen::Matrix<float, 6, 6> KGlobal; // matriz de rigidez global
+    Eigen::Matrix<float, 6, 6> kGeoLocal; // matriz de rigidez geométrica local
+    Eigen::Matrix<float, 6, 6> kGeoGlobal; // matriz de rigidez geométrica global
     Eigen::Matrix<float, 6, 6> T; // matriz de transformação
     Eigen::Matrix<float, 6, 1> vGlobal; // vetor de deslocamentos globais
     Eigen::Matrix<float, 6, 1> Fglobal; // vetor de forças globais
@@ -55,6 +57,9 @@ public:
 
     void calculaMatrizRigidezLocal();
     void calcularMatrizTransformacao();
+    void calcularMatrizRigidezGlobal();
+    void calcularMatrizRigidezGeometricaLocal(float forcaNormal);
+    void calcularMatrizRigidezGeometricaGlobal();
     void calcularDeslocamentosGlobais(const Eigen::VectorXf& d, const std::array<int, 6>& bcn);
     void calcularForcasGlobais();
     void calcularEsforcosLocais();

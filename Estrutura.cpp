@@ -26,6 +26,8 @@ Barra::Barra(const No& noi_, const No& nof_, float modElast_, float area_, float
     kLocal.setZero();
     T.setZero();
     KGlobal.setZero();
+    kGeoLocal.setZero();
+    kGeoGlobal.setZero();
 
     vGlobal.setZero();
     Fglobal.setZero();
@@ -34,8 +36,7 @@ Barra::Barra(const No& noi_, const No& nof_, float modElast_, float area_, float
 
     calculaMatrizRigidezLocal();
     calcularMatrizTransformacao();
-
-    KGlobal = T.transpose() * kLocal * T;
+    calcularMatrizRigidezGlobal();
 
     // std::cout << "--- Nova Barra criada ---" << std::endl;
     // std::cout << "modElas: " << modElast << std::endl;
@@ -83,6 +84,28 @@ void Barra::calcularMatrizTransformacao()
          0, 0, 0, cos, sen, 0,
          0, 0, 0, -sen, cos, 0,
          0, 0, 0, 0, 0, 1;
+}
+
+void Barra::calcularMatrizRigidezGlobal()
+{
+    KGlobal = T.transpose() * kLocal * T;
+}
+
+void Barra::calcularMatrizRigidezGeometricaLocal(float forcaNormal)
+{
+    kGeoLocal << 0, 0, 0, 0, 0, 0, 
+                0, 36.0, 3.0 * comprimento,  0, -36.0, -3.0 * comprimento,
+                0, 3.0 * comprimento, 4.0 * comprimento * comprimento, 0, -3.0 * comprimento, -1.0 * comprimento * comprimento,
+                0, 0, 0, 0, 0, 0,
+                0, -36.0,   -3.0 * comprimento,  0, 36.0,   -3.0 * comprimento,
+               0, -3.0 * comprimento, -1.0 * comprimento * comprimento, 0, -3.0 * comprimento,  4.0 * comprimento * comprimento;
+
+    kGeoLocal *= (forcaNormal) / (30.0 * comprimento);
+}
+
+void Barra::calcularMatrizRigidezGeometricaGlobal()
+{
+    kGeoGlobal = T.transpose() * kGeoLocal * T;
 }
 
 void Barra::calcularDeslocamentosGlobais(const Eigen::VectorXf &d, const std::array<int, 6> &bcn)
@@ -413,16 +436,26 @@ void Estrutura::resolverSistema()
         for (size_t n = 0; n < barras.size(); n++)
         {
             barras[n].calcularDeslocamentosGlobais(d, BCN[n]);
-            // std::cout << "\nDeslocamentos globais da barra " << n << " = \n"
-            //           << barras[n].vGlobal << std::endl;
+            std::cout << "\nDeslocamentos globais da barra " << n << " = \n"
+                      << barras[n].vGlobal << std::endl;
 
             barras[n].calcularForcasGlobais();
-            // std::cout << "\nForças globais da barra " << n << " = \n"
-            //           << barras[n].Fglobal << std::endl;
+            std::cout << "\nForças globais da barra " << n << " = \n"
+                      << barras[n].Fglobal << std::endl;
 
             barras[n].calcularEsforcosLocais();
-            // std::cout << "\nEsforços locais da barra " << n << " = \n"
-            //           << barras[n].fLocal << std::endl;
+            std::cout << "\nEsforços locais da barra " << n << " = \n"
+                      << barras[n].fLocal << std::endl;
+
+            float forcaNormal = barras[n].fLocal(0);
+
+            barras[n].calcularMatrizRigidezGeometricaLocal(forcaNormal); // forcaNormal = fLocal(0)
+            std::cout << "\nMatriz de rigidez geométrica local da barra " << n << " = \n"
+                      << barras[n].kGeoLocal << std::endl;
+
+            barras[n].calcularMatrizRigidezGeometricaGlobal();
+            std::cout << "\nMatriz de rigidez geométrica global da barra " << n << " = \n"
+                      << barras[n].kGeoGlobal << std::endl;
 
             for (int i = 0; i < 6; i++)
             {
@@ -657,8 +690,8 @@ void Estrutura::resolverSistemaEsparsa()
         //           << barras[n].Fglobal << std::endl;
 
         barras[n].calcularEsforcosLocais();
-        // std::cout << "\nEsforços locais (esparso) da barra " << n << " = \n"
-        //           << barras[n].fLocal << std::endl;
+        std::cout << "\nEsforços locais (esparso) da barra " << n << " = \n"
+                  << barras[n].fLocal << std::endl;
 
         for (int i = 0; i < 6; i++)
         {
