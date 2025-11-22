@@ -65,27 +65,42 @@ int main()
     // est.adicionarNo({5.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({10.0f, 6.0f, 1000.0f, 0, 0, false, true, false});
 
-    // Pilar engastado
+    float Pmax = 82.90467 * 0.95;
+    int passos = 60;
+    int maxIter = 100;
+    float tol = 0.1;
+    float deslocamentoMax = 10.0f;
+
+    // Pilar biapoiado com carga no topo
     est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
-    est.adicionarNo({0.0f, 1.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 2.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 4.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 5.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 6.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 7.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 8.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 9.0f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 10.0f, 0.0f, -10.0f, 0.0f, true, false, false});
+    // est.adicionarNo({0.0f, 0.25f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 0.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 0.75f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 1.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 1.25f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 1.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 1.75f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 2.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 2.25f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 2.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 2.75f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 3.25f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 3.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 3.75f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 4.0f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 4.25f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 4.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 4.75f, 0.0f, 0.0f, 0.0f, false, false, false});
+    est.adicionarNo({0.0f, 5.0f, 0.0f, -Pmax, 0.0f, true, false, false});
 
     float base = 0.1;
     float altura = 0.2;
-    float area = base * altura;
-    float inercia = (base * pow(altura, 3)) / 12.0f;
-    float modElast = 200E9;
+    float area = 1e-4;
+    float inercia = 1e-6;
+    float modElast = 210E9;
     float espessura = 6;
-    float forcaHorizontal = 100.0f;
-
+    // float forcaHorizontal = 100.0f;
 
     // Cria as conexões entre os nós em sequência
     for (size_t i = 0; i < est.nos.size() - 1; i++)
@@ -93,7 +108,8 @@ int main()
         est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
     }
 
-    est.resolverSistema();
+    // est.resolverSistemaLinear();
+    est.resolverSistemaNaoLinear(maxIter, passos, tol, deslocamentoMax);
     est.calcularPontosDeformadaEstrutura(20e4);
 
     // est.adicionarBarra(est.nos[0], est.nos[1], 0, 1, modElast, area, inercia, espessura);

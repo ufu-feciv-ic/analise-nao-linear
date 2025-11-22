@@ -94,18 +94,24 @@ void Barra::calcularMatrizRigidezGlobal()
 void Barra::calcularMatrizRigidezGeometricaLocal(float forcaNormal)
 {
     kGeoLocal << 0, 0, 0, 0, 0, 0, 
-                0, 36.0, 3.0 * comprimento,  0, -36.0, -3.0 * comprimento,
+                0, 36.0, 3.0 * comprimento,  0, -36.0, 3.0 * comprimento,
                 0, 3.0 * comprimento, 4.0 * comprimento * comprimento, 0, -3.0 * comprimento, -1.0 * comprimento * comprimento,
                 0, 0, 0, 0, 0, 0,
                 0, -36.0,   -3.0 * comprimento,  0, 36.0,   -3.0 * comprimento,
-               0, -3.0 * comprimento, -1.0 * comprimento * comprimento, 0, -3.0 * comprimento,  4.0 * comprimento * comprimento;
+               0, 3.0 * comprimento, -1.0 * comprimento * comprimento, 0, -3.0 * comprimento,  4.0 * comprimento * comprimento;
 
     kGeoLocal *= (forcaNormal) / (30.0 * comprimento);
+
+    // std::cout << "Matriz de rigidez geométrica local kGeoLocal = \n"
+    //           << kGeoLocal << std::endl;
 }
 
 void Barra::calcularMatrizRigidezGeometricaGlobal()
 {
     kGeoGlobal = T.transpose() * kGeoLocal * T;
+
+    // std::cout << "Matriz de rigidez geométrica global kGeoGlobal = \n"
+    //           << kGeoGlobal << std::endl;
 }
 
 void Barra::calcularDeslocamentosGlobais(const Eigen::VectorXf &d, const std::array<int, 6> &bcn)
@@ -298,6 +304,31 @@ void Estrutura::calcularMatrizRigidezEstrutura()
     // std::cout << std::endl;
 }
 
+void Estrutura::calcularMatrizRigidezGeometricaEstrutura()
+{
+    Kg.resize(nos.size() * 3, nos.size() * 3);
+    Kg.setZero();
+
+    montarBCN();
+
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        const auto& barra = barras[n];
+        const auto& bcn = BCN[n];
+
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                Kg(bcn[i], bcn[j]) += barra.kGeoGlobal(i, j);
+            }
+        }
+    }
+
+    // std::cout << "Matriz de rigidez geométrica global da estrutura Kg = \n"
+    //           << Kg << std::endl;
+}
+
 void Estrutura::montarVetorForcas()
 {
     P.resize(nos.size() * 3);
@@ -406,6 +437,38 @@ void Estrutura::aplicarCondicoesDeContorno()
     //             << P << std::endl;
 }
 
+void Estrutura::aplicarCondicoesDeContornoMatrizTangente()
+{
+    for (int n = 0; n < (int)nos.size(); n++)
+    {
+        const auto& no = nos[n];
+        if (no.fixoX)
+        {
+            int gln = n * 3;
+            Ktangente.row(gln).setZero();
+            Ktangente.col(gln).setZero();
+            Ktangente(gln, gln) = 1.0f;
+        }
+        if (no.fixoY)
+        {
+            int gln = n * 3 + 1;
+            Ktangente.row(gln).setZero();
+            Ktangente.col(gln).setZero();
+            Ktangente(gln, gln) = 1.0f;
+        }
+        if (no.rotaZ)
+        {
+            int gln = n * 3 + 2;
+            Ktangente.row(gln).setZero();
+            Ktangente.col(gln).setZero();
+            Ktangente(gln, gln) = 1.0f;
+        }
+    }
+
+    std::cout << "Matriz tangente Ktangente (após aplicar CC) = \n"
+              << Ktangente << std::endl;
+}
+
 void Estrutura::calcularPontosDeformadaEstrutura(float fatorEscala)
 {
     for (auto& barra : barras)
@@ -414,7 +477,7 @@ void Estrutura::calcularPontosDeformadaEstrutura(float fatorEscala)
     }
 }
 
-void Estrutura::resolverSistema()
+void Estrutura::resolverSistemaLinear()
 {
     calcularMatrizRigidezEstrutura();
     montarVetorForcas();
@@ -471,6 +534,123 @@ void Estrutura::resolverSistema()
     else
     {
         std::cout << "Decomposição LLT falhou. A matriz pode não ser positiva definida." << std::endl;
+    }
+}
+
+Eigen::VectorXf Estrutura::calcularEsforcosInternos(const Eigen::VectorXf &deslocamentos)
+{
+    Eigen::VectorXf Fint = Eigen::VectorXf::Zero(nos.size() * 3);
+
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        Barra& barra = barras[n];
+
+        barra.calcularDeslocamentosGlobais(deslocamentos, BCN[n]);
+        barra.calcularForcasGlobais();
+        barra.calcularEsforcosLocais();
+
+        float forcaNormal = barras[n].fLocal(0);
+        barras[n].calcularMatrizRigidezGeometricaLocal(forcaNormal); 
+        barras[n].calcularMatrizRigidezGeometricaGlobal();
+
+        // Eigen::VectorXf fintBarra = (barra.KGlobal + barra.kGeoGlobal) * barra.vGlobal;
+        Eigen::VectorXf fintBarra = (barra.KGlobal) * barra.vGlobal;
+
+        for (int i = 0; i < 6; i++)
+        {
+            // Fint(BCN[n][i]) += barra.Fglobal(i);
+            Fint(BCN[n][i]) += fintBarra(i);
+        }
+    }
+
+    return Fint;
+}
+
+void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento, float tolerancia, float deslocamentoMax)
+{
+    // Preparar a estrutura para a análise não linear
+    calcularMatrizRigidezEstrutura();
+    montarVetorForcas();
+    aplicarCondicoesDeContorno();
+
+    d.resize(nos.size() * 3);
+    d.setZero();
+
+    // Loop de incremento de carga
+    for (int passo = 1; passo <= passosIncremento; passo++)
+    {
+        float fatorIncremento = (float)passo / passosIncremento;
+        Eigen::VectorXf FextPasso = fatorIncremento * P;
+
+        std::cout << "\nForça externa no passo " << passo << " = \n"
+                  << FextPasso << std::endl;
+
+        std::cout << "\n--- Passo Incremental " << passo << " (Fator: " << fatorIncremento << ") ---" << std::endl;
+
+        for (int iteracao = 1; iteracao <= maxIteracoes; iteracao++)
+        {
+            // Cálculo da rigidez tangente (Ktangente = S + Kg)
+            
+            // Atualizar Kg com base na força normal das barras (calculada com o "d" mais recente)
+            calcularMatrizRigidezGeometricaEstrutura();
+
+            std::cout << "\nMatriz de rigidez estrutural S no passo " << passo << ", iteração " << iteracao << " = \n"
+                      << S << std::endl;
+
+            std::cout << "\nMatriz de rigidez geométrica Kg no passo " << passo << ", iteração " << iteracao << " = \n"
+                      << Kg << std::endl;
+
+            Ktangente = S + Kg;
+
+            std::cout << "\nMatriz tangente Ktangente no passo " << passo << ", iteração " << iteracao << " = \n"
+                      << Ktangente << std::endl;
+
+            aplicarCondicoesDeContornoMatrizTangente();
+
+            // Calcular resíduo e atualizar o incremento no deslocamento
+            Eigen::VectorXf Fint = calcularEsforcosInternos(d);
+
+            std::cout << "\nForça interna no passo " << passo << ", iteração " << iteracao << " = \n"
+                      << Fint << std::endl;
+            
+            Eigen::VectorXf Residuo = FextPasso - Fint;
+
+            std::cout << "\nResíduo no passo " << passo << ", iteração " << iteracao << " = \n"
+                      << Residuo << std::endl;
+
+            float normaResiduos = Residuo.norm();
+        
+            std::cout << "Passo " << passo << ", Iteração " << iteracao
+                        << ", Norma dos resíduos: " << normaResiduos << std::endl;
+
+            if (normaResiduos < tolerancia)
+            {
+                std::cout << "  [CONVERGÊNCIA] Passo " << passo << ", Iteração " << iteracao-1
+                          << ", Norma: " << normaResiduos << std::endl;
+                break;
+            }
+
+            // Calcular o incremento de deslocamentos
+            Eigen::LLT<Eigen::MatrixXf> llt(Ktangente);
+            if(llt.info() != Eigen::Success)
+            {
+                std::cout << "Decomposição LLT falhou na iteração " << iteracao << ". A matriz pode não ser positiva definida." << std::endl;
+                return;
+            }
+
+            Eigen::VectorXf deltaD = llt.solve(Residuo);
+
+            d += deltaD;
+
+            std::cout << "  Iteração " << iteracao << ", Norma dos resíduos: " << normaResiduos << std::endl;
+            
+            // Se não convergiu após o número máximo de iterações:
+            if (iteracao == maxIteracoes) 
+            {
+                std::cout << "  [AVISO] Não Convergiu no Passo " << passo << " após " 
+                          << maxIteracoes << " iterações. Norma final: " << normaResiduos << std::endl;
+            }
+        }
     }
 }
 

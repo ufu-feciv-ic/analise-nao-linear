@@ -76,11 +76,14 @@ public:
     std::vector<Barra> barras;
     std::vector<std::array<int, 6>> BCN;
     Eigen::MatrixXf S;
+    Eigen::MatrixXf Kg;
+    Eigen::MatrixXf Ktangente;
     Eigen::SparseMatrix<float> Sesparsa;
     Eigen::VectorXf P;
     Eigen::VectorXf Pu;
     Eigen::VectorXf d;
     Eigen::VectorXf R;
+    Eigen::VectorXf Residuo;
 
     Estrutura() = default;
     Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
@@ -91,10 +94,14 @@ public:
 
     void montarBCN();
     void calcularMatrizRigidezEstrutura();
+    void calcularMatrizRigidezGeometricaEstrutura();
     void montarVetorForcas();
     void aplicarCondicoesDeContorno();
+    void aplicarCondicoesDeContornoMatrizTangente();
     void calcularPontosDeformadaEstrutura(float fatorEscala);
-    void resolverSistema();
+    void resolverSistemaLinear();
+    Eigen::VectorXf calcularEsforcosInternos(const Eigen::VectorXf& deslocamentos);
+    void resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento, float tolerancia, float deslocamentoMax);
 
     void calcularMatrizRigidezEstruturaEsparsa();
     void aplicarCondicoesDeContornoEsparsa();
