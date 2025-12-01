@@ -582,6 +582,8 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
         float fatorIncremento = (float)passo / passosIncremento;
         Eigen::VectorXf FextPasso = fatorIncremento * P;
 
+        std::cout << "\nVetor P" << P << std::endl;
+
         std::cout << "\nForça externa no passo " << passo << " = \n"
                   << FextPasso << std::endl;
 
@@ -589,32 +591,39 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
 
         for (int iteracao = 1; iteracao <= maxIteracoes; iteracao++)
         {
+            // Cálculo das forças internas e matrizes das barras
+            Eigen::VectorXf Fint = calcularEsforcosInternos(d);
+
             // Cálculo da rigidez tangente (Ktangente = S + Kg)
-            
             // Atualizar Kg com base na força normal das barras (calculada com o "d" mais recente)
             calcularMatrizRigidezGeometricaEstrutura();
 
-            std::cout << "\nMatriz de rigidez estrutural S no passo " << passo << ", iteração " << iteracao << " = \n"
-                      << S << std::endl;
-
-            std::cout << "\nMatriz de rigidez geométrica Kg no passo " << passo << ", iteração " << iteracao << " = \n"
-                      << Kg << std::endl;
-
+            // ktangente = S (elástica) + Kg (geométrica)
             Ktangente = S + Kg;
 
-            std::cout << "\nMatriz tangente Ktangente no passo " << passo << ", iteração " << iteracao << " = \n"
-                      << Ktangente << std::endl;
+            // std::cout << "\nMatriz de rigidez estrutural S no passo " << passo << ", iteração " << iteracao << " = \n"
+            //           << S << std::endl;
 
-            aplicarCondicoesDeContornoMatrizTangente();
+            // std::cout << "\nMatriz de rigidez geométrica Kg no passo " << passo << ", iteração " << iteracao << " = \n"
+            //           << Kg << std::endl;
+
+            // std::cout << "\nMatriz tangente Ktangente no passo " << passo << ", iteração " << iteracao << " = \n"
+            //           << Ktangente << std::endl;
 
             // Calcular resíduo e atualizar o incremento no deslocamento
-            Eigen::VectorXf Fint = calcularEsforcosInternos(d);
+            Eigen::VectorXf Residuo = FextPasso - Fint;
+
+            // Condições de contorno no resíduo
+            for (int n = 0; n < (int)nos.size(); n++)
+            {
+                if (nos[n].fixoX) Residuo(n * 3) = 0.0f;
+                if (nos[n].fixoY) Residuo(n * 3 + 1) = 0.0f;
+                if (nos[n].rotaZ) Residuo(n * 3 + 2) = 0.0f;
+            }
 
             std::cout << "\nForça interna no passo " << passo << ", iteração " << iteracao << " = \n"
                       << Fint << std::endl;
             
-            Eigen::VectorXf Residuo = FextPasso - Fint;
-
             std::cout << "\nResíduo no passo " << passo << ", iteração " << iteracao << " = \n"
                       << Residuo << std::endl;
 
@@ -630,12 +639,15 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
                 break;
             }
 
+            // Condições de contorno na matriz tangente
+            aplicarCondicoesDeContornoMatrizTangente();
+            
             // Calcular o incremento de deslocamentos
             Eigen::LLT<Eigen::MatrixXf> llt(Ktangente);
             if(llt.info() != Eigen::Success)
             {
-                std::cout << "Decomposição LLT falhou na iteração " << iteracao << ". A matriz pode não ser positiva definida." << std::endl;
-                return;
+                std::cout << "  [ERRO] Matriz singular na iteração " << iteracao << std::endl;
+                return; // Abortar
             }
 
             Eigen::VectorXf deltaD = llt.solve(Residuo);
@@ -643,6 +655,13 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
             d += deltaD;
 
             std::cout << "  Iteração " << iteracao << ", Norma dos resíduos: " << normaResiduos << std::endl;
+            
+            // Opcional: verificação de divergência (NaN ou Inf)
+            if (!d.allFinite()) 
+            {
+                 std::cout << "  [ERRO] Instabilidade numérica (NaN detetado)." << std::endl;
+                 return;
+            }
             
             // Se não convergiu após o número máximo de iterações:
             if (iteracao == maxIteracoes) 
