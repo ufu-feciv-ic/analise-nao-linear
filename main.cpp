@@ -71,8 +71,8 @@ int main()
     float tol = 0.1;
     float deslocamentoMax = 10.0f;
 
-    // Pilar biapoiado com carga no topo
-    est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
+    // // Pilar biapoiado com carga no topo
+    // est.adicionarNo({0.0f, 0.0f,0, 0, 0, true, true, false});
     // est.adicionarNo({0.0f, 0.25f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 0.5f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 0.75f, 0.0f, 0.0f, 0.0f, false, false, false});
@@ -82,17 +82,17 @@ int main()
     // est.adicionarNo({0.0f, 1.75f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 2.0f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 2.25f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 2.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 2.5f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 2.75f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 3.0f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 3.25f, 0.0f, 0.0f, 0.0f, false, false, false});
-    // est.adicionarNo({0.0f, 3.5f, 0.0f, 0.0f, 0.0f, false, false, false});
+    // est.adicionarNo({0.0f, 3.5f, 0.f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 3.75f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 4.0f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 4.25f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 4.5f, 0.0f, 0.0f, 0.0f, false, false, false});
     // est.adicionarNo({0.0f, 4.75f, 0.0f, 0.0f, 0.0f, false, false, false});
-    est.adicionarNo({0.0f, 5.0f, 0.0f, -Pmax, 0.0f, true, false, false});
+    // est.adicionarNo({0.0f, 5.0f, 0.0f, -Pmax, 0.0f, true, false, false});
 
     float base = 0.1;
     float altura = 0.2;
@@ -100,7 +100,37 @@ int main()
     float inercia = 1e-6;
     float modElast = 210E9;
     float espessura = 6;
+
     // float forcaHorizontal = 100.0f;
+
+    // // Cria as conexões entre os nós em sequência
+    // for (size_t i = 0; i < est.nos.size() - 1; i++)
+    // {
+    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    // }
+
+    // Parâmetros da imperfeição
+    float L_total = 5.0f;
+    float delta0 = L_total / 500.0f; // Imperfeição de L/500 (1 cm)
+
+    int num_divisoes = 20; // Mais nós para ver a curva
+    for (int i = 0; i <= num_divisoes; i++) 
+    {
+        float t = (float)i / num_divisoes;
+        float y = L_total * t;
+        
+        // Imperfeição senoidal (igual ao Python)
+        float x = delta0 * sin(3.14159f * t); 
+
+        bool fixoX = (i == 0); // Base fixa em X
+        bool fixoY = (i == 0); // Base fixa em Y
+        
+        // Carga apenas no topo
+        float fy = (i == num_divisoes) ? -Pmax : 0.0f;
+        
+        // Adiciona nó
+        est.adicionarNo({x, y, 0.0f, fy, 0.0f, fixoX, fixoY, false});
+    }
 
     // Cria as conexões entre os nós em sequência
     for (size_t i = 0; i < est.nos.size() - 1; i++)

@@ -61,6 +61,7 @@ public:
     void calcularMatrizRigidezGeometricaLocal(float forcaNormal);
     void calcularMatrizRigidezGeometricaGlobal();
     void calcularDeslocamentosGlobais(const Eigen::VectorXf& d, const std::array<int, 6>& bcn);
+    void atualizarGeometria(const No& novoNoi, const No& novoNof);
     void calcularForcasGlobais();
     void calcularEsforcosLocais();
     void calculaDeformadaLocal(float fatorEscala);

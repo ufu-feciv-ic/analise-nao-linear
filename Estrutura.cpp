@@ -125,6 +125,37 @@ void Barra::calcularDeslocamentosGlobais(const Eigen::VectorXf &d, const std::ar
     }
 }
 
+void Barra::atualizarGeometria(const No &novoNoi, const No &novoNof)
+{
+    // Atualiza as coordenadas dos nós da barra (temporários ou reais)
+    // Nota: Em uma formulação co-rotacional rigorosa, calculamos o comprimento atual
+    // e a rotação do corpo rígido.
+    
+    float dx = novoNof.x - novoNoi.x;
+    float dy = novoNof.y - novoNoi.y;
+    float L_atual = sqrt(dx*dx + dy*dy);
+    
+    // Atualiza seno e cosseno baseados na configuração DEFORMADA
+    cos = dx / L_atual;
+    sen = dy / L_atual;
+
+    // Recalcula Matriz de Transformação T com o novo ângulo
+    T.setZero();
+    T << cos, sen, 0, 0, 0, 0,
+         -sen, cos, 0, 0, 0, 0,
+         0, 0, 1, 0, 0, 0,
+         0, 0, 0, cos, sen, 0,
+         0, 0, 0, -sen, cos, 0,
+         0, 0, 0, 0, 0, 1;
+
+    // Opcional: Atualizar kLocal se quiser considerar grandes deformações axiais (Green-Lagrange)
+    // comprimento = L_atual; 
+    // calculaMatrizRigidezLocal(); 
+    
+    // Recalcula KGlobal com o novo T
+    calcularMatrizRigidezGlobal();
+}
+
 void Barra::calcularForcasGlobais()
 {
     Fglobal = KGlobal * vGlobal;
@@ -465,8 +496,8 @@ void Estrutura::aplicarCondicoesDeContornoMatrizTangente()
         }
     }
 
-    std::cout << "Matriz tangente Ktangente (após aplicar CC) = \n"
-              << Ktangente << std::endl;
+    // std::cout << "Matriz tangente Ktangente (após aplicar CC) = \n"
+    //           << Ktangente << std::endl;
 }
 
 void Estrutura::calcularPontosDeformadaEstrutura(float fatorEscala)
@@ -582,20 +613,42 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
         float fatorIncremento = (float)passo / passosIncremento;
         Eigen::VectorXf FextPasso = fatorIncremento * P;
 
-        std::cout << "\nVetor P" << P << std::endl;
+        // std::cout << "\nVetor P" << P << std::endl;
 
-        std::cout << "\nForça externa no passo " << passo << " = \n"
-                  << FextPasso << std::endl;
+        // std::cout << "\nForça externa no passo " << passo << " = \n"
+        //           << FextPasso << std::endl;
 
         std::cout << "\n--- Passo Incremental " << passo << " (Fator: " << fatorIncremento << ") ---" << std::endl;
 
         for (int iteracao = 1; iteracao <= maxIteracoes; iteracao++)
         {
-            // Cálculo das forças internas e matrizes das barras
-            Eigen::VectorXf Fint = calcularEsforcosInternos(d);
+            // Atualizar a geometria das barras com os deslocamentos atuais "d"
+            for (auto& barra : barras) 
+            {
+                // Pega posições originais
+                const No& n1_orig = nos[barra.noInicialId]; // Atenção: usar índices corretos do vetor
+                const No& n2_orig = nos[barra.noFinalId];
 
+                // Calcula posições deformadas: Original + Deslocamento (d)
+                No n1_def = n1_orig;
+                n1_def.x += d(n1_orig.id * 3);
+                n1_def.y += d(n1_orig.id * 3 + 1);
+
+                No n2_def = n2_orig;
+                n2_def.x += d(n2_orig.id * 3);
+                n2_def.y += d(n2_orig.id * 3 + 1);
+
+                // Atualiza a barra (T e KGlobal)
+                barra.atualizarGeometria(n1_def, n2_def);
+            }
+
+
+            // Cálculo das forças internas e matrizes das barras
             // Cálculo da rigidez tangente (Ktangente = S + Kg)
             // Atualizar Kg com base na força normal das barras (calculada com o "d" mais recente)
+
+            Eigen::VectorXf Fint = calcularEsforcosInternos(d);
+            calcularMatrizRigidezEstrutura();
             calcularMatrizRigidezGeometricaEstrutura();
 
             // ktangente = S (elástica) + Kg (geométrica)
@@ -621,16 +674,16 @@ void Estrutura::resolverSistemaNaoLinear(int maxIteracoes, int passosIncremento,
                 if (nos[n].rotaZ) Residuo(n * 3 + 2) = 0.0f;
             }
 
-            std::cout << "\nForça interna no passo " << passo << ", iteração " << iteracao << " = \n"
-                      << Fint << std::endl;
+            // std::cout << "\nForça interna no passo " << passo << ", iteração " << iteracao << " = \n"
+            //           << Fint << std::endl;
             
-            std::cout << "\nResíduo no passo " << passo << ", iteração " << iteracao << " = \n"
-                      << Residuo << std::endl;
+            // std::cout << "\nResíduo no passo " << passo << ", iteração " << iteracao << " = \n"
+            //           << Residuo << std::endl;
 
             float normaResiduos = Residuo.norm();
         
-            std::cout << "Passo " << passo << ", Iteração " << iteracao
-                        << ", Norma dos resíduos: " << normaResiduos << std::endl;
+            // std::cout << "Passo " << passo << ", Iteração " << iteracao
+            //             << ", Norma dos resíduos: " << normaResiduos << std::endl;
 
             if (normaResiduos < tolerancia)
             {
