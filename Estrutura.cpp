@@ -163,21 +163,21 @@ void Barra::calculaDeformadaLocal(float fatorEscala)
     // std::cout << "\nVerificar fator de escala" << std::endl;
 }
 
-// Implementação da classe Estrutura
-Estrutura::Estrutura (std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_) : nos(nos_), conexoes(conexoes_)
-{
-    float base = 0.1;
-    float altura = 0.2;
-    float area = base * altura;
-    float inercia = (base * pow(altura, 3)) / 12.0f;
-    float modElast = 2500E6;
-    float esp = 6;
+// // Implementação da classe Estrutura
+// Estrutura::Estrutura (std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_) : nos(nos_), conexoes(conexoes_)
+// {
+//     float base = 0.1;
+//     float altura = 0.2;
+//     float area = base * altura;
+//     float inercia = (base * pow(altura, 3)) / 12.0f;
+//     float modElast = 2500E6;
+//     float esp = 6;
 
-    for (size_t i = 0; i < conexoes.size(); i++)
-    {
-        barras.emplace_back(nos[conexoes[i][0]], nos[conexoes[i][1]], modElast, area, inercia, esp);
-    }
-}
+//     for (size_t i = 0; i < conexoes.size(); i++)
+//     {
+//         barras.emplace_back(nos[conexoes[i][0]], nos[conexoes[i][1]], modElast, area, inercia, esp);
+//     }
+// }
 
 void Estrutura::adicionarNo(const No& no)
 {
@@ -438,6 +438,59 @@ void Estrutura::resolverSistema()
     else
     {
         std::cout << "Decomposição LLT falhou. A matriz pode não ser positiva definida." << std::endl;
+    }
+}
+
+void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
+{
+
+    S.resize(nos.size() * 3, nos.size() * 3);
+    S.setZero();
+
+    Fint.resize(nos.size() * 3);
+    Fint.setZero();
+
+    montarBCN();
+
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        float dx = barras[n].nof.x - barras[n].noi.x;
+        float dy = barras[n].nof.y - barras[n].noi.y;
+        barras[n].comprimento = sqrt(pow(dx, 2) + pow(dy, 2));
+        barras[n].cos = dx / barras[n].comprimento;
+        barras[n].sen = dy / barras[n].comprimento;
+
+        barras[n].calculaMatrizRigidezLocal();
+        barras[n].calcularMatrizTransformacao();
+
+        Eigen::VectorXf dofs = {barras[n].noInicialId * 3,
+                                barras[n].noInicialId * 3 + 1,
+                                barras[n].noInicialId * 3 + 2,
+                                barras[n].noFinalId * 3,
+                                barras[n].noFinalId * 3 + 1,
+                                barras[n].noFinalId * 3 + 2};
+        
+        for (int i = 0; i < 6; i++)
+        {
+            barras[n].vGlobal(i) = d(BCN[n][i]);
+        }
+
+        barras[n].uLocal = barras[n].T * barras[n].vGlobal;
+
+        barras[n].fLocal = barras[n].kLocal * barras[n].uLocal;
+
+        barras[n].Fglobal = barras[n].T.transpose() * barras[n].fLocal;
+
+        barras[n].KGlobal = barras[n].T.transpose() * barras[n].kLocal * barras[n].T;
+
+        for (int i = 0; i < 6; i++)
+        {
+            Fint(BCN[n][i]) += barras[n].Fglobal(i);
+            for (int j = 0; j < 6; j++)
+            {
+                S(BCN[n][i], BCN[n][j]) += barras[n].KGlobal(i, j);
+            }
+        }
     }
 }
 

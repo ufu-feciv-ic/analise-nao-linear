@@ -43,6 +43,11 @@ public:
     Eigen::Matrix<float, 6, 6> kLocal; // matriz de rigidez local
     Eigen::Matrix<float, 6, 6> KGlobal; // matriz de rigidez global
     Eigen::Matrix<float, 6, 6> T; // matriz de transformação
+    // Eigen::VectorXf vGlobal; // vetor de deslocamentos globais
+    // Eigen::VectorXf Fglobal; // vetor de forças globais
+    // Eigen::VectorXf uLocal; // vetor de deslocamentos locais
+    // Eigen::VectorXf fLocal; // vetor de forças locais
+
     Eigen::Matrix<float, 6, 1> vGlobal; // vetor de deslocamentos globais
     Eigen::Matrix<float, 6, 1> Fglobal; // vetor de forças globais
     Eigen::Matrix<float, 6, 1> uLocal; // vetor de deslocamentos locais
@@ -76,9 +81,10 @@ public:
     Eigen::VectorXf Pu;
     Eigen::VectorXf d;
     Eigen::VectorXf R;
+    Eigen::VectorXf Fint;
 
     Estrutura() = default;
-    Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
+    // Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
 
     void adicionarNo(const No& no);
     void adicionarBarra(No noi_, No nof_, int noiId, int nofId, float modElast_, float area_, float inercia_, float esp_);
@@ -90,6 +96,7 @@ public:
     void aplicarCondicoesDeContorno();
     void calcularPontosDeformadaEstrutura(float fatorEscala);
     void resolverSistema();
+    void montarMatrizRigidezeForcasInternas(Eigen::VectorXf d);
 
     void calcularMatrizRigidezEstruturaEsparsa();
     void aplicarCondicoesDeContornoEsparsa();
