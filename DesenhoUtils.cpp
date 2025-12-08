@@ -165,62 +165,118 @@ void drawSeta(Vector2 psi, Vector2 psf, float esp, float compt, float zoom, Colo
 //     }
 // }
 
+// void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
+// {
+//     // --- 1. Cálculo da Norma (Magnitude) ---
+//     // Usamos o Teorema de Pitágoras para encontrar o "comprimento" do vetor.
+//     float norma = sqrtf(fx * fx + fy * fy);
+
+//     // Se a força for (quase) zero, não desenha nada
+//     if (norma < 0.001f) return;
+
+//     // --- 2. [NOVO] Fator de Escala Visual ---
+//     // Este fator converte a magnitude (ex: 100.0) para unidades do mundo (ex: 2.0)
+//     // Ajuste este valor para mudar o comprimento das setas
+//     float escalaVisual = 0.02f; 
+//     float fx_vis = fx * escalaVisual; // Força visual em X
+//     float fy_vis = fy * escalaVisual; // Força visual em Y
+
+//     // --- 3. Cálculo da Seta (Modificado) ---
+//     // Usamos o ângulo original da força para manter a direção correta
+//     float angulo = atan2(fy, fx);
+    
+//     // Ponto final da seta (psf) - perto do nó
+//     Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
+    
+//     // Ponto inicial da seta (psi) - USA AS FORÇAS VISUAIS (escaladas)
+//     Vector2 psi = {-fx_vis + x - cosf(angulo) * (8 / zoom), -fy_vis + y - sinf(angulo) * (8 / zoom)};
+    
+//     // Desenha a seta (com a ponta de 12.0f, como sugerido na resposta anterior)
+//     drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor); //
+
+//     // --- 4. Desenho do Texto (Corrigido para 'norma' e tamanho 10) ---
+//     // O texto mostra a 'norma' (valor real), não a força visual.
+    
+//     const char *textoNorma = TextFormat("%.2f kN", norma);
+//     float tamanhoFonte = 10.0f / zoom;
+//     float espacamento = 1.0f / zoom;
+
+//     // Lógica original de posicionamento do texto
+//     if (fx > 0 && fy < 0)
+//     {
+//         DrawTextEx(GetFontDefault(), 
+//                    textoNorma,
+//                    // Offset ajustado para a nova fonte (10.0f)
+//                    {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (10.0f / zoom)}, 
+//                    tamanhoFonte, 
+//                    espacamento, 
+//                    cor);
+//     }
+//     else
+//     {
+//         DrawTextEx(GetFontDefault(), 
+//                    textoNorma,
+//                    {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
+//                    tamanhoFonte, 
+//                    espacamento, 
+//                    cor);
+//     }
+// }
+
 void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
 {
-    // --- 1. Cálculo da Norma (Magnitude) ---
-    // Usamos o Teorema de Pitágoras para encontrar o "comprimento" do vetor.
+    // --- 1. Cálculo da Magnitude Real (Para o Texto) ---
     float norma = sqrtf(fx * fx + fy * fy);
 
-    // Se a força for (quase) zero, não desenha nada
+    // Se a força for muito pequena, não desenhamos nada para evitar sujeira visual
     if (norma < 0.001f) return;
 
-    // --- 2. [NOVO] Fator de Escala Visual ---
-    // Este fator converte a magnitude (ex: 100.0) para unidades do mundo (ex: 2.0)
-    // Ajuste este valor para mudar o comprimento das setas
-    float escalaVisual = 0.02f; 
-    float fx_vis = fx * escalaVisual; // Força visual em X
-    float fy_vis = fy * escalaVisual; // Força visual em Y
+    // --- 2. Definição do Tamanho Visual Fixo ---
+    // Aqui está o segredo: definimos um tamanho fixo (ex: 40.0f)
+    // Dividimos pelo zoom para que o tamanho visual se mantenha constante ao dar zoom
+    float tamanhoVisualFixo = 40.0f / zoom; 
+    float distanciaDoNo = 8.0f / zoom; // Pequeno espaço entre o nó e a ponta da seta
 
-    // --- 3. Cálculo da Seta (Modificado) ---
-    // Usamos o ângulo original da força para manter a direção correta
+    // --- 3. Cálculo da Direção ---
     float angulo = atan2(fy, fx);
-    
-    // Ponto final da seta (psf) - perto do nó
-    Vector2 psf = {x - cosf(angulo) * (8 / zoom), y - sinf(angulo) * (8 / zoom)};
-    
-    // Ponto inicial da seta (psi) - USA AS FORÇAS VISUAIS (escaladas)
-    Vector2 psi = {-fx_vis + x - cosf(angulo) * (8 / zoom), -fy_vis + y - sinf(angulo) * (8 / zoom)};
-    
-    // Desenha a seta (com a ponta de 12.0f, como sugerido na resposta anterior)
-    drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor); //
 
-    // --- 4. Desenho do Texto (Corrigido para 'norma' e tamanho 10) ---
-    // O texto mostra a 'norma' (valor real), não a força visual.
+    // --- 4. Cálculo das Posições (Geometria) ---
+    // psf: Ponto Final (Ponta da seta), próximo ao nó (x, y)
+    Vector2 psf = {
+        x - cosf(angulo) * distanciaDoNo, 
+        y - sinf(angulo) * distanciaDoNo
+    };
+
+    // psi: Ponto Inicial (Cauda da seta)
+    // Calculamos recuando o 'tamanhoVisualFixo' a partir da ponta
+    Vector2 psi = {
+        psf.x - cosf(angulo) * tamanhoVisualFixo,
+        psf.y - sinf(angulo) * tamanhoVisualFixo
+    };
     
+    // Desenha a seta com geometria fixa
+    // Nota: O parametro 'compt' (12.0f) é o tamanho da cabeça da seta
+    drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor);
+
+    // --- 5. Desenho do Texto (Valor Real) ---
     const char *textoNorma = TextFormat("%.2f kN", norma);
     float tamanhoFonte = 10.0f / zoom;
     float espacamento = 1.0f / zoom;
 
-    // Lógica original de posicionamento do texto
-    if (fx > 0 && fy < 0)
-    {
-        DrawTextEx(GetFontDefault(), 
-                   textoNorma,
-                   // Offset ajustado para a nova fonte (10.0f)
-                   {psi.x + (8.0f / zoom), -psi.y - (8.0f / zoom) - (10.0f / zoom)}, 
-                   tamanhoFonte, 
-                   espacamento, 
-                   cor);
-    }
-    else
-    {
-        DrawTextEx(GetFontDefault(), 
-                   textoNorma,
-                   {psi.x + (8.0f / zoom), -psi.y + (8.0f / zoom)}, 
-                   tamanhoFonte, 
-                   espacamento, 
-                   cor);
-    }
+    // Ajuste fino da posição do texto para não ficar em cima da linha
+    Vector2 posTexto = psi; // Começa na cauda da seta
+    
+    // Pequeno offset para afastar o texto da linha
+    float offsetTexto = 10.0f / zoom;
+    
+    // Lógica simples para posicionar o texto "fora" da seta dependendo do ângulo
+    if (fx >= 0) posTexto.x += offsetTexto;
+    else posTexto.x -= offsetTexto * 4; // *4 apenas para compensar o tamanho da string
+    
+    if (fy >= 0) posTexto.y += offsetTexto;
+    else posTexto.y -= offsetTexto;
+
+    DrawTextEx(GetFontDefault(), textoNorma, {posTexto.x, -posTexto.y}, tamanhoFonte, espacamento, cor);
 }
 
 void drawMoment(Vector2 position, float radius, bool isAnticlockwise, float arrowLength, float arrowWidth, float lineWidth, Color color, Camera2D camera, const char *annotation = "")
@@ -296,13 +352,44 @@ void drawMoment(Vector2 position, float radius, bool isAnticlockwise, float arro
     }
 }
 
+// void drawFixedSizeAnnotadedMoment(Vector2 position, float moment, float radius, float arrowLength, float arrowWidth, float lineWidth, Color color, Camera2D cam)
+// {
+//     if (fabsf(moment) < 0.0000000001f)
+//         return;
+
+//     char annotation[256];
+//     snprintf(annotation, sizeof(annotation), "%.2f kg.m", fabsf(moment));
+
+//     drawMoment(position, radius / cam.zoom, moment > 0 ? true : false, arrowLength / cam.zoom, arrowWidth / cam.zoom, lineWidth / cam.zoom, color, cam, annotation);
+// }
+
 void drawFixedSizeAnnotadedMoment(Vector2 position, float moment, float radius, float arrowLength, float arrowWidth, float lineWidth, Color color, Camera2D cam)
 {
+    // Se o momento for zero, não desenha
     if (fabsf(moment) < 0.0000000001f)
         return;
 
+    // --- Formatação do Texto ---
     char annotation[256];
     snprintf(annotation, sizeof(annotation), "%.2f kg.m", fabsf(moment));
 
-    drawMoment(position, radius / cam.zoom, moment > 0 ? true : false, arrowLength / cam.zoom, arrowWidth / cam.zoom, lineWidth / cam.zoom, color, cam, annotation);
+    // --- Lógica de Tamanho Constante ---
+    // O raio passado por parâmetro (radius) deve ser FIXO na chamada desta função.
+    // Exemplo: Sempre chame com radius = 20.0f.
+    // O código abaixo garante que o raio seja aplicado visualmente com o zoom correto.
+    
+    // A direção depende se o momento é positivo ou negativo
+    bool isAnticlockwise = (moment > 0);
+
+    drawMoment(
+        position, 
+        radius / cam.zoom,   // Raio visual ajustado pelo zoom
+        isAnticlockwise,     // Direção baseada no sinal
+        arrowLength / cam.zoom, 
+        arrowWidth / cam.zoom, 
+        lineWidth / cam.zoom, 
+        color, 
+        cam, 
+        annotation
+    );
 }
