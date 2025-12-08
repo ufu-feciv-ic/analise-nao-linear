@@ -259,7 +259,7 @@ void drawForca(float x, float y, float fx, float fy, float zoom, Color cor)
     drawSeta(psi, psf, 3.0f, 12.0f, zoom, cor);
 
     // --- 5. Desenho do Texto (Valor Real) ---
-    const char *textoNorma = TextFormat("%.2f kN", norma);
+    const char *textoNorma = TextFormat("%.2f N", norma);
     float tamanhoFonte = 10.0f / zoom;
     float espacamento = 1.0f / zoom;
 

@@ -8,6 +8,7 @@
 #include "DesenhoUtils.h"
 #include "Estrutura.h"
 #include "RenderizadorEstrutura.h"
+#include "eigenpch.h"
 
 int main()
 {
@@ -207,7 +208,7 @@ int main()
     // Geometria 
     float comprimento = 5.0f; // [m] comprimento total da coluna
     float delta0 = 0.01f; // [m] amplitude de imperfeição inicial lateral
-    int numDivBarra = 20; // numero de elementos ao longo da coluna
+    int numDivBarra = 1; // numero de elementos ao longo da coluna
 
     for (int i = 0; i <= numDivBarra; i++)
     {
@@ -225,14 +226,22 @@ int main()
         est.adicionarNo({x + w, y, 0, fy, 0, fixoX, fixoY, 0});
     }
 
+    Eigen::VectorXf desl;
+
     // Cria as conexões entre os nós em sequência
     for (size_t i = 0; i < est.nos.size() - 1; i++)
     {
         est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+        desl.resize(est.nos.size() * 3);
+        desl.setZero();
     }
-    
-    est.resolverSistemaEsparsa();
-    est.calcularPontosDeformadaEstrutura(10e1);
+
+    est.montarMatrizRigidezeForcasInternas(desl);
+
+    bool solver = false;
+
+    // est.resolverSistemaEsparsa();
+    // est.calcularPontosDeformadaEstrutura(10e1);
 
     while (!WindowShouldClose())
     {
@@ -281,14 +290,16 @@ int main()
                 //camada controladora do desenho 
                 renderizador.desenhaEstrutura(est, camera);
 
+                // if (solver) renderizador.desenhaReacoes(est, camera);
+
                 if (IsKeyDown(KEY_SPACE))
                 {
-                    renderizador.desenhaDeformada(est, RED, camera);
+                    if (solver) renderizador.desenhaDeformada(est, RED, camera);
                 }
                 
                 if (IsKeyDown(KEY_D))
                 {
-                    renderizador.desenhaPontoDeformada(est, camera.zoom);
+                    if (solver) renderizador.desenhaPontoDeformada(est, camera.zoom);
                 }
             
                 //renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);

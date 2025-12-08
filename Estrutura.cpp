@@ -462,13 +462,6 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
 
         barras[n].calculaMatrizRigidezLocal();
         barras[n].calcularMatrizTransformacao();
-
-        Eigen::VectorXf dofs = {barras[n].noInicialId * 3,
-                                barras[n].noInicialId * 3 + 1,
-                                barras[n].noInicialId * 3 + 2,
-                                barras[n].noFinalId * 3,
-                                barras[n].noFinalId * 3 + 1,
-                                barras[n].noFinalId * 3 + 2};
         
         for (int i = 0; i < 6; i++)
         {
@@ -492,6 +485,11 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
             }
         }
     }
+
+    std::cout << "Matriz de rigidez global da estrutura S (forças internas) = \n"
+              << S << std::endl;
+    std::cout << "\nVetor de forças internas Fint = \n" 
+              << Fint << std::endl;
 }
 
 /**

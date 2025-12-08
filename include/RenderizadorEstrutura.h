@@ -14,6 +14,7 @@ public:
     void desenhaDeformada(const Estrutura& est, Color cor, Camera2D camera);
     void desenhaDeformadaAnimada(Estrutura est, float fatorEscala, Color cor, Camera2D camera);
     void desenhaPontoDeformada(Estrutura est, float zoom);
+    void desenhaReacoes(const Estrutura& est, Camera2D camera);
 
 private:
     void desenhaNo(const No& no, Camera2D camera);
@@ -21,6 +22,4 @@ private:
     void desenhaIndice(const No& no, float zoom);
     void desenhaApoios(const No& no, float zoom);
     void desenhaBarras(const Estrutura& est, Camera2D camera);
-    void desenhaReacoes(const Estrutura& est, Camera2D camera);
-    
 };

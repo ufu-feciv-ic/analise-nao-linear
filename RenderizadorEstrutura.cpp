@@ -276,13 +276,18 @@ void RenderizadorEstrutura::desenhaBarras(const Estrutura& est, Camera2D camera)
 
 void RenderizadorEstrutura::desenhaReacoes(const Estrutura &est, Camera2D camera)
 {
+    if (est.R.size() == 0 || est.R.size() < (long long) est.nos.size() * 3)
+    {
+        return; // Sai da função imediatamente. Não desenha nada, não dá erro.
+    }
+
     for (size_t i = 0; i < est.nos.size(); i++)
     {
         const No& no = est.nos[i];
         float rx = 0.0f;
         float ry = 0.0f;
         float mz = 0.0f;
-
+        
         if (no.fixoX)
         {
             rx = est.R(i * 3);
