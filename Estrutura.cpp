@@ -107,6 +107,62 @@ void Barra::calcularEsforcosLocais()
     fLocal = kLocal * uLocal;
 }
 
+// void Barra::calculaDeformadaLocal(float fatorEscala)
+// {
+//     pontosDeformada.clear();
+
+//     int numPontos = 20;
+
+//     if (comprimento <= 0)
+//     {
+//         std::cout << "Comprimento da barra inválido!" << std::endl;
+//         return;
+//     }
+
+//     if (uLocal.size() != 6)
+//     {
+//         std::cout << "Vetor de deslocamentos locais não calculado!" << std::endl;
+//         return;
+//     }
+
+//     float ui = uLocal(0); // deslocamento inicial no eixo x local
+//     float vi = uLocal(1); // deslocamento inicial no eixo y local
+//     float ti = uLocal(2); // rotação inicial no nó inicial
+//     float uf = uLocal(3); // deslocamento final no eixo x local
+//     float vf = uLocal(4); // deslocamento final no eixo y local
+//     float tf = uLocal(5); // rotação final no nó final
+
+//     for (int i = 0; i <= numPontos; i++)
+//     {
+//         float x = ((float) i / numPontos) * comprimento;
+
+//         float xl = x / comprimento;
+
+//         float N0 = 1.0f - xl;
+//         float N1 = 1 - 3 * xl * xl + 2 * xl * xl * xl;
+//         float N2 = x * (1 - xl) * (1 - xl);
+//         float N3 = xl; 
+//         float N4 = 3 * xl * xl - 2 * xl * xl * xl;
+//         float N5 = x * x / comprimento * (xl - 1);
+
+//         float ux = N0 * ui + N3 * uf;
+//         float uy = N1 * vi + N2 * ti + N4 * vf + N5 * tf;
+
+//         ux *= fatorEscala;
+//         uy *= fatorEscala;
+
+//         float xDefLocal = x + ux;
+//         float yDefLocal = uy;
+
+//         float xDefGlobal = noi.x + (cos * xDefLocal - sen * yDefLocal);
+//         float yDefGlobal = noi.y + (sen * xDefLocal + cos * yDefLocal);
+
+//         pontosDeformada.push_back({xDefGlobal, yDefGlobal});
+//     }
+
+//     // std::cout << "\nVerificar fator de escala" << std::endl;
+// }
+
 void Barra::calculaDeformadaLocal(float fatorEscala)
 {
     pontosDeformada.clear();
@@ -134,30 +190,30 @@ void Barra::calculaDeformadaLocal(float fatorEscala)
 
     for (int i = 0; i <= numPontos; i++)
     {
-        float x = ((float) i / numPontos) * comprimento;
+        float xl = (float) i / numPontos;
 
-        float xl = x / comprimento;
+        float xReal = xl * comprimento;
 
         float N0 = 1.0f - xl;
         float N1 = 1 - 3 * xl * xl + 2 * xl * xl * xl;
-        float N2 = x * (1 - xl) * (1 - xl);
+        float N2 = xReal * (1 - xl) * (1 - xl);
         float N3 = xl; 
         float N4 = 3 * xl * xl - 2 * xl * xl * xl;
-        float N5 = x * x / comprimento * (xl - 1);
+        float N5 = xReal * xReal / comprimento * (xl - 1);
 
-        float ux = N0 * ui + N3 * uf;
-        float uy = N1 * vi + N2 * ti + N4 * vf + N5 * tf;
+        float uxInterpolacao = N0 * ui + N3 * uf;
+        float uyInterpolacao = N1 * vi + N2 * ti + N4 * vf + N5 * tf;
 
-        ux *= fatorEscala;
-        uy *= fatorEscala;
+        float dxGlobal = (cos * uxInterpolacao - sen * uyInterpolacao);
+        float dyGlobal = (sen * uxInterpolacao + cos * uyInterpolacao);
 
-        float xDefLocal = x + ux;
-        float yDefLocal = uy;
+        float xOrigGlobal = noi.x + (nof.x - noi.x) * xl;
+        float yOrigGlobal = noi.y + (nof.y - noi.y) * xl;
 
-        float xDefGlobal = noi.x + (cos * xDefLocal - sen * yDefLocal);
-        float yDefGlobal = noi.y + (sen * xDefLocal + cos * yDefLocal);
+        float xFinal = xOrigGlobal + dxGlobal * fatorEscala;
+        float yFinal = yOrigGlobal + dyGlobal * fatorEscala;
 
-        pontosDeformada.push_back({xDefGlobal, yDefGlobal});
+        pontosDeformada.push_back({xFinal, yFinal});
     }
 
     // std::cout << "\nVerificar fator de escala" << std::endl;
@@ -281,6 +337,8 @@ void Estrutura::montarVetorForcas()
     P.setZero();
     R.resize(nos.size() * 3);
     R.setZero();
+    Residuo.resize(nos.size() * 3);
+    Residuo.setZero();
 
     // std::cout << "Montando vetor de forças P..." << std::endl;
     // std::cout << P << std::endl;
@@ -575,6 +633,8 @@ void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tol
 
         d = dIncremento;
     }
+
+    std::cout << "\nAnálise não-linear concluída. Deslocamentos finais d = \n" << d << std::endl;
        
 }
 

@@ -239,9 +239,22 @@ int main()
     // est.montarMatrizRigidezeForcasInternas(desl);
 
     est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax);
-    est.calcularPontosDeformadaEstrutura(20e4);
+    // est.resolverSistema();
+
+    float escalaVisualizacao = 0.0f;
 
     bool solver = true;
+
+    if (solver)
+    {
+        escalaVisualizacao = 10.0f;
+    }
+    else
+    {
+        escalaVisualizacao = 2000.0f;
+    }
+
+    est.calcularPontosDeformadaEstrutura(escalaVisualizacao);
 
     // est.resolverSistemaEsparsa();
     // est.calcularPontosDeformadaEstrutura(10e1);
@@ -302,7 +315,7 @@ int main()
                 
                 if (IsKeyDown(KEY_D))
                 {
-                    if (solver) renderizador.desenhaPontoDeformada(est, camera.zoom);
+                    if (solver) renderizador.desenhaPontoDeformada(est, escalaVisualizacao, camera.zoom);
                 }
             
                 //renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);

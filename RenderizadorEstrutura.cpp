@@ -101,7 +101,7 @@ void RenderizadorEstrutura::desenhaPonto(const No& no, float zoom)
     DrawCircleV({no.x, -no.y}, 6 / zoom, {0, 235, 255, 255});    
 }
 
-void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float zoom)
+void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float fatorEscala, float zoom)
 {
     for (size_t i = 0; i < est.nos.size(); i++)
     {
@@ -110,8 +110,8 @@ void RenderizadorEstrutura::desenhaPontoDeformada(Estrutura est, float zoom)
         float dx = est.d(3 * i);
         float dy = est.d(3 * i + 1);
 
-        dx *= 20e4;
-        dy *= 20e4;
+        dx *= fatorEscala;
+        dy *= fatorEscala;
 
         float xDef = no.x + dx;
         float yDef = no.y + dy;
