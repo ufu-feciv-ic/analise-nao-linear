@@ -208,7 +208,7 @@ int main()
     // Geometria 
     float comprimento = 5.0f; // [m] comprimento total da coluna
     float delta0 = 0.01f; // [m] amplitude de imperfeição inicial lateral
-    int numDivBarra = 1; // numero de elementos ao longo da coluna
+    int numDivBarra = 20; // numero de elementos ao longo da coluna
 
     for (int i = 0; i <= numDivBarra; i++)
     {
@@ -236,9 +236,12 @@ int main()
         desl.setZero();
     }
 
-    est.montarMatrizRigidezeForcasInternas(desl);
+    // est.montarMatrizRigidezeForcasInternas(desl);
 
-    bool solver = false;
+    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax);
+    est.calcularPontosDeformadaEstrutura(20e4);
+
+    bool solver = true;
 
     // est.resolverSistemaEsparsa();
     // est.calcularPontosDeformadaEstrutura(10e1);

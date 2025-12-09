@@ -329,6 +329,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
             P(gln) = 0.0f;
+            Residuo(gln) = 0.0f; 
         }
         if (no.fixoY)
         {
@@ -337,6 +338,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
             P(gln) = 0.0f;
+            Residuo(gln) = 0.0f;
         }
         if (no.rotaZ)
         {
@@ -345,6 +347,7 @@ void Estrutura::aplicarCondicoesDeContorno()
             S.col(gln).setZero();
             S(gln, gln) = 1.0f;
             P(gln) = 0.0f;
+            Residuo(gln) = 0.0f;
         }
     }
 
@@ -454,8 +457,17 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
 
     for (size_t n = 0; n < barras.size(); n++)
     {
-        float dx = barras[n].nof.x - barras[n].noi.x;
-        float dy = barras[n].nof.y - barras[n].noi.y;
+        int idNoi = barras[n].noInicialId;
+        int idNof = barras[n].noFinalId;
+
+        float xiDef = nos[idNoi].x + d(3*idNoi);
+        float yiDef = nos[idNoi].y + d(3*idNoi + 1);
+
+        float xfDef = nos[idNof].x + d(idNof);
+        float yfDef = nos[idNof].y + d(3*idNof + 1);
+
+        float dx = xfDef - xiDef;
+        float dy = yfDef - yiDef;
         barras[n].comprimento = sqrt(pow(dx, 2) + pow(dy, 2));
         barras[n].cos = dx / barras[n].comprimento;
         barras[n].sen = dy / barras[n].comprimento;
@@ -486,10 +498,84 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
         }
     }
 
-    std::cout << "Matriz de rigidez global da estrutura S (forças internas) = \n"
-              << S << std::endl;
-    std::cout << "\nVetor de forças internas Fint = \n" 
-              << Fint << std::endl;
+    // std::cout << "Matriz de rigidez global da estrutura S (forças internas) = \n"
+    //           << S << std::endl;
+    // std::cout << "\nVetor de forças internas Fint = \n" 
+    //           << Fint << std::endl;
+}
+
+void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo)
+{
+    montarVetorForcas();
+
+    d.resize(nos.size() * 3);
+    d.setZero();
+
+    std::cout << "Iniciando análise não-linear com " << passos << " passos de carga." << std::endl;
+    std::cout << "Máximo de iterações por passo: " << maxIteracoes << ", Tolerância: " << tolerancia << std::endl;
+
+    for (int i = 0; i < passos; i++)
+    {
+        float lambida = (float)i / passos;
+        Eigen::VectorXf FextPasso = lambida * P;
+
+        // std::cout << "\nCarga total aplicada P = \n" << P << std::endl;
+        // std::cout << "Fator de carga (lambida) neste passo: " << lambida << std::endl;
+        // std::cout << "Força externa aplicada neste passo FextPasso = \n" << FextPasso << std::endl;
+
+        Eigen::VectorXf dIncremento = d;
+
+        std::cout << "\n--- Passo de carga " << i / passos << " ---" << std::endl;
+        std::cout << "Força externa aplicada neste passo:\n" << FextPasso << std::endl;
+
+        bool convergiu = false;
+
+        for (int iter = 0; iter < maxIteracoes; iter++)
+        {
+            montarMatrizRigidezeForcasInternas(dIncremento);
+
+            Residuo = FextPasso - Fint;
+
+            aplicarCondicoesDeContorno();
+
+            float normaResiduo = Residuo.norm();
+
+            std::cout << "Iteração " << iter + 1 << ": Norma do resíduo = " << normaResiduo << std::endl;
+
+            if (normaResiduo < tolerancia)
+            {
+                std::cout << "Convergência alcançada na iteração " << iter + 1 << " do passo " << i + 1 << "." << std::endl;
+                convergiu = true;
+                break;
+            }
+
+            Eigen::LLT<Eigen::MatrixXf> llt(S);
+            if (llt.info() != Eigen::Success)
+            {
+                std::cout << "Decomposição LLT falhou. A matriz pode não ser positiva definida." << std::endl;
+                break;
+            }
+
+            Eigen::VectorXf deltaD = llt.solve(Residuo);
+
+            dIncremento += deltaD;
+
+            if (abs(deltaD.maxCoeff()) > deslocamentoMaximo)
+            {
+                std::cout << "Deslocamento máximo por iteração excedido. Encerrando analise." << std::endl;
+                break;
+            }
+        }
+
+        if (!convergiu)
+        {
+            std::cout << "O passo de carga " << i + 1 << " não convergiu dentro do número máximo de iterações." << std::endl;
+            break;
+        }
+
+        d = dIncremento;
+    }
+       
 }
 
 /**
