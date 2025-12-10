@@ -195,7 +195,7 @@ int main()
     // Parâmetros numéricos do solver
     float Pmax = 82904.67 * 0.95; // [N]
     int passos = 60; // número de passos de carga até chegar em Pmax
-    int maxIter = 100; // máximo de iterações de Newton por passo
+    int maxIter = 200; // máximo de iterações de Newton por passo
     float tol = 1.0f; // tolerância para norma de resíduo 
     float deslocMax = 10.0f; // [m] deslocamento máximo para o nó monitorado
     float espessura = 6.0f; // espessura para o desenho da linha 
@@ -237,11 +237,11 @@ int main()
     }
 
 
-    int idNoMeio = numDivBarra / 2;
+    int idNoMonitorado = est.nos.back().id; // nó monitorado (ponta da coluna)
 
     // est.montarMatrizRigidezeForcasInternas(desl);
 
-    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMeio, 0, Pmax);
+    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
     // est.resolverSistema();
 
     float escalaVisualizacao = 0.0f;
@@ -321,6 +321,7 @@ int main()
                     if (solver) renderizador.desenhaPontoDeformada(est, escalaVisualizacao, camera.zoom);
                 }
             
+                if (solver) renderizador.desenhaPontoDeformada(est, escalaVisualizacao, camera.zoom);
                 //renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);
 
             EndMode2D();

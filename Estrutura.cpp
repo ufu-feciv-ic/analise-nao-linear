@@ -85,6 +85,16 @@ void Barra::calcularMatrizTransformacao()
          0, 0, 0, 0, 0, 1;
 }
 
+void Barra::calcularMatrizTransformacaoNaoLinear()
+{
+    T << cos, sen, 0, 0, 0, 0,
+         -sen, cos, 0, 0, 0, 0,
+         0, 0, 1, 0, 0, 0,
+         0, 0, 0, cos, sen, 0,
+         0, 0, 0, -sen, cos, 0,
+         0, 0, 0, 0, 0, 1;
+}
+
 void Barra::calcularDeslocamentosGlobais(const Eigen::VectorXf &d, const std::array<int, 6> &bcn)
 {
     int gln = 3;
@@ -521,7 +531,7 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
         float xiDef = nos[idNoi].x + d(3*idNoi);
         float yiDef = nos[idNoi].y + d(3*idNoi + 1);
 
-        float xfDef = nos[idNof].x + d(idNof);
+        float xfDef = nos[idNof].x + d(3*idNof);
         float yfDef = nos[idNof].y + d(3*idNof + 1);
 
         float dx = xfDef - xiDef;
@@ -531,7 +541,16 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
         barras[n].sen = dy / barras[n].comprimento;
 
         barras[n].calculaMatrizRigidezLocal();
-        barras[n].calcularMatrizTransformacao();
+
+        barras[n].T.setZero();
+        // Nó i
+        barras[n].T(0, 0) = barras[n].cos;  barras[n].T(0, 1) = barras[n].sen;
+        barras[n].T(1, 0) = -barras[n].sen; barras[n].T(1, 1) = barras[n].cos;
+        barras[n].T(2, 2) = 1.0f;
+        // Nó f
+        barras[n].T(3, 3) = barras[n].cos;  barras[n].T(3, 4) = barras[n].sen;
+        barras[n].T(4, 3) = -barras[n].sen; barras[n].T(4, 4) = barras[n].cos;
+        barras[n].T(5, 5) = 1.0f;
         
         for (int i = 0; i < 6; i++)
         {
@@ -574,8 +593,8 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
     historicoDeslocamentos.push_back({0.0f, 0.0f});
     int indiceGlobalMonitorado = noMonitoradoId * 3 + grauLiberdade;
 
-    std::cout << "Iniciando análise não-linear com " << passos << " passos de carga." << std::endl;
-    std::cout << "Máximo de iterações por passo: " << maxIteracoes << ", Tolerância: " << tolerancia << std::endl;
+    // std::cout << "Iniciando análise não-linear com " << passos << " passos de carga." << std::endl;
+    // std::cout << "Máximo de iterações por passo: " << maxIteracoes << ", Tolerância: " << tolerancia << std::endl;
 
     for (int i = 0; i < passos; i++)
     {
@@ -588,14 +607,14 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 
         Eigen::VectorXf dIncremento = d;
 
-        std::cout << "\n--- Passo de carga " << i / passos << " ---" << std::endl;
-        std::cout << "Força externa aplicada neste passo:\n" << FextPasso << std::endl;
+        // std::cout << "\n--- Passo de carga " << i / passos << " ---" << std::endl;
+        // std::cout << "Força externa aplicada neste passo:\n" << FextPasso << std::endl;
 
         bool convergiu = false;
 
         for (int iter = 0; iter < maxIteracoes; iter++)
         {
-            montarMatrizRigidezeForcasInternas(dIncremento);
+            montarMatrizRigidezeForcasInternas(d);
 
             Residuo = FextPasso - Fint;
 
@@ -603,14 +622,16 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 
             float normaResiduo = Residuo.norm();
 
-            std::cout << "Iteração " << iter + 1 << ": Norma do resíduo = " << normaResiduo << std::endl;
+            // std::cout << "Iteração " << iter + 1 << ": Norma do resíduo = " << normaResiduo << std::endl;
 
             if (normaResiduo < tolerancia)
             {
-                std::cout << "Convergência alcançada na iteração " << iter + 1 << " do passo " << i + 1 << "." << std::endl;
+                // std::cout << "Convergência alcançada na iteração " << iter + 1 << " do passo " << i + 1 << "." << std::endl;
                 convergiu = true;
                 break;
             }
+
+            // std::cout << "\nMatriz de rigidez global da estrutura S (neste incremento) = \n" << S << std::endl;
 
             Eigen::LLT<Eigen::MatrixXf> llt(S);
             if (llt.info() != Eigen::Success)
@@ -621,29 +642,38 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 
             Eigen::VectorXf deltaD = llt.solve(Residuo);
 
-            dIncremento += deltaD;
+            d += deltaD;
 
             if (abs(deltaD.maxCoeff()) > deslocamentoMaximo)
             {
                 std::cout << "Deslocamento máximo por iteração excedido. Encerrando analise." << std::endl;
                 break;
             }
+
+            // d = dIncremento;
         }
 
-        if (convergiu)
-        {
-            d = dIncremento;
+        // if (convergiu)
+        // {   
+        //     float u_atual = d(indiceGlobalMonitorado);
+        //     float p_atual = lambida * cargaTotalRef; // Força aplicada neste passo
             
-            float u_atual = d(indiceGlobalMonitorado) * 1000;
-            float p_atual = lambida * cargaTotalRef / 1000; // Força aplicada neste passo
-            
-            historicoDeslocamentos.push_back({ abs(u_atual), abs(p_atual) }); 
-        }
-        else
-        {
-            std::cout << "Não convergiu no passo " << i << std::endl;
-            break;
-        }
+        //     historicoDeslocamentos.push_back({ abs(u_atual), abs(p_atual) }); 
+
+        //     std::cout << p_atual << " " << u_atual << std::endl;
+        // }
+        // else
+        // {
+        //     std::cout << "Não convergiu no passo " << i << std::endl;
+        //     break;
+        // }
+
+        float u_atual = d(indiceGlobalMonitorado);
+        float p_atual = lambida * cargaTotalRef; // Força aplicada neste passo
+        
+        historicoDeslocamentos.push_back({ abs(u_atual), abs(p_atual) }); 
+
+        std::cout << p_atual << " " << u_atual << std::endl;
     }
 
     std::cout << "\nAnálise não-linear concluída. Deslocamentos finais d = \n" << d << std::endl;

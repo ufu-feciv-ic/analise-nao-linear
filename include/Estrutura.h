@@ -60,6 +60,7 @@ public:
 
     void calculaMatrizRigidezLocal();
     void calcularMatrizTransformacao();
+    void calcularMatrizTransformacaoNaoLinear();
     void calcularDeslocamentosGlobais(const Eigen::VectorXf& d, const std::array<int, 6>& bcn);
     void calcularForcasGlobais();
     void calcularEsforcosLocais();
