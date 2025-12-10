@@ -562,12 +562,17 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
     //           << Fint << std::endl;
 }
 
-void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo)
+void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo, 
+int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 {
     montarVetorForcas();
 
     d.resize(nos.size() * 3);
     d.setZero();
+    
+    historicoDeslocamentos.clear();
+    historicoDeslocamentos.push_back({0.0f, 0.0f});
+    int indiceGlobalMonitorado = noMonitoradoId * 3 + grauLiberdade;
 
     std::cout << "Iniciando análise não-linear com " << passos << " passos de carga." << std::endl;
     std::cout << "Máximo de iterações por passo: " << maxIteracoes << ", Tolerância: " << tolerancia << std::endl;
@@ -625,13 +630,20 @@ void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tol
             }
         }
 
-        if (!convergiu)
+        if (convergiu)
         {
-            std::cout << "O passo de carga " << i + 1 << " não convergiu dentro do número máximo de iterações." << std::endl;
+            d = dIncremento;
+            
+            float u_atual = d(indiceGlobalMonitorado) * 1000;
+            float p_atual = lambida * cargaTotalRef / 1000; // Força aplicada neste passo
+            
+            historicoDeslocamentos.push_back({ abs(u_atual), abs(p_atual) }); 
+        }
+        else
+        {
+            std::cout << "Não convergiu no passo " << i << std::endl;
             break;
         }
-
-        d = dIncremento;
     }
 
     std::cout << "\nAnálise não-linear concluída. Deslocamentos finais d = \n" << d << std::endl;

@@ -83,6 +83,7 @@ public:
     Eigen::VectorXf R;
     Eigen::VectorXf Fint;
     Eigen::VectorXf Residuo;
+    std::vector<std::pair<float, float>> historicoDeslocamentos;
 
     Estrutura() = default;
     // Estrutura(std::vector<No> nos_, std::vector<std::array<int, 2>> conexoes_);
@@ -98,7 +99,8 @@ public:
     void calcularPontosDeformadaEstrutura(float fatorEscala);
     void resolverSistema();
     void montarMatrizRigidezeForcasInternas(Eigen::VectorXf d);
-    void resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo);
+    void resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo, 
+    int noMonitoradoId, int grauLiberdade, float cargaTotalRef);
 
     void calcularMatrizRigidezEstruturaEsparsa();
     void aplicarCondicoesDeContornoEsparsa();

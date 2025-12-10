@@ -236,9 +236,12 @@ int main()
         desl.setZero();
     }
 
+
+    int idNoMeio = numDivBarra / 2;
+
     // est.montarMatrizRigidezeForcasInternas(desl);
 
-    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax);
+    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMeio, 0, Pmax);
     // est.resolverSistema();
 
     float escalaVisualizacao = 0.0f;
@@ -321,6 +324,12 @@ int main()
                 //renderizador.desenhaDeformadaAnimada(est, escalaAnimada, RED, camera);
 
             EndMode2D();
+
+            Rectangle areaGrafico = { screenWidth - 320, 20, 300, 200 };
+            renderizador.desenhaGraficoPxU(est.historicoDeslocamentos, areaGrafico, "Curva P x u");
+
+            DrawFPS(10, 10);
+
         EndDrawing();
 
     }
