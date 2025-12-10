@@ -241,8 +241,26 @@ int main()
 
     // est.montarMatrizRigidezeForcasInternas(desl);
 
-    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
+    // est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
     // est.resolverSistema();
+
+    auto startDenso = std::chrono::high_resolution_clock::now();
+    est.resolverSistema();
+    auto endDenso = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationDenso = endDenso - startDenso;
+    std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << " ms." << std::endl;
+
+    auto startEsparso = std::chrono::high_resolution_clock::now();
+    est.resolverSistemaEsparsa();
+    auto endEsparso = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
+    std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << " ms." << std::endl;
+
+    auto startNaolinear = std::chrono::high_resolution_clock::now();
+    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
+    auto endNaoLinear = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationNaoLinear = endNaoLinear - startNaolinear;
+    std::cout << "Tempo de resolução da analise nao linear: " << durationNaoLinear.count() << " s." << std::endl;
 
     float escalaVisualizacao = 0.0f;
 
