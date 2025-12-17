@@ -9,6 +9,9 @@
 #include "Estrutura.h"
 #include "RenderizadorEstrutura.h"
 #include "eigenpch.h"
+#include "imgui.h"
+#include "implot.h"
+#include "rlImGui.h"
 
 int main()
 {
@@ -22,6 +25,9 @@ int main()
     camera.zoom = 25.0f;
     camera.offset = {screenWidth / 2, screenHeight / 2};
     camera.target = {0, 0};
+
+    rlImGuiSetup(true);
+    ImPlot::CreateContext();
 
     // std::vector<No> nos;
     // nos.emplace_back(0.0f, 0.0f,0, 0, 0, true, false, true, camera);
@@ -344,8 +350,47 @@ int main()
 
             EndMode2D();
 
-            Rectangle areaGrafico = { screenWidth - 320, 20, 300, 200 };
-            renderizador.desenhaGraficoPxU(est.historicoDeslocamentos, areaGrafico, "Curva P x u");
+            // Rectangle areaGrafico = { screenWidth - 320, 20, 300, 200 };
+            // renderizador.desenhaGraficoPxU(est.historicoDeslocamentos, areaGrafico, "Curva P x u");
+
+            rlImGuiBegin();
+            
+                std::vector<float> xData, yData;
+
+                for (const auto& par : est.historicoDeslocamentos)
+                {
+                    xData.push_back(par.first);
+                    yData.push_back(par.second);
+                }
+
+                ImGui::Begin("Analise de Resultados");
+
+                if (ImGui::CollapsingHeader("Curva P x u", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (ImPlot::BeginPlot("##CurvaPxU", ImVec2(-1, 300)))
+                    {
+                        ImPlot::SetupAxes("Deslocamento u (m)", "Carga P (N)");
+
+                        if (!xData.empty() && !yData.empty())
+                        {
+                            ImPlot::PlotLine("P x u", xData.data(), yData.data(), (int)xData.size());
+                            ImPlot::PlotScatter("Pontos", xData.data(), yData.data(), (int)xData.size());
+                        }
+
+                        ImPlot::EndPlot();
+                    }
+                }
+
+                if (ImGui::CollapsingHeader("Performance do Solver")) 
+                {
+                    ImGui::Text("Tempo Denso: %.4f ms", durationDenso.count());
+                    ImGui::Text("Tempo Esparso: %.4f ms", durationEsparso.count());
+                    ImGui::Text("Tempo Não-Linear: %.4f s", durationNaoLinear.count());
+                }
+
+                ImGui::End();
+
+            rlImGuiEnd();
 
             DrawFPS(10, 10);
 
@@ -356,7 +401,8 @@ int main()
     // std::cout << "Fazer deformada" << std::endl;
     // std::cout << "Fazer reações de apoio" << std::endl;
     // std::cout << "Ver tabelas de carregamentos padrões" << std::endl;
-    
+    ImPlot::DestroyContext();
+    rlImGuiShutdown();
     CloseWindow();
     return 0;
 }
