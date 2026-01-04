@@ -537,6 +537,10 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
         float dx = xfDef - xiDef;
         float dy = yfDef - yiDef;
         barras[n].comprimento = sqrt(pow(dx, 2) + pow(dy, 2));
+
+        std::cout << "dx: " << dx << ", dy: " << dy << std::endl;
+        std::cout << "Barra " << n << " comprimento atualizado: " << barras[n].comprimento << std::endl;
+
         barras[n].cos = dx / barras[n].comprimento;
         barras[n].sen = dy / barras[n].comprimento;
 
@@ -572,8 +576,12 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
             {
                 S(BCN[n][i], BCN[n][j]) += barras[n].KGlobal(i, j);
             }
+
+            R(BCN[n][i]) += barras[n].Fglobal(i);
         }
     }
+
+    R = R - P; 
 
     // std::cout << "Matriz de rigidez global da estrutura S (forças internas) = \n"
     //           << S << std::endl;
@@ -598,8 +606,8 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 
     for (int i = 0; i < passos; i++)
     {
-        float lambida = (float)i / passos;
-        Eigen::VectorXf FextPasso = lambida * P;
+        float lambda = (float)i / passos;
+        Eigen::VectorXf FextPasso = lambda * P;
 
         // std::cout << "\nCarga total aplicada P = \n" << P << std::endl;
         // std::cout << "Fator de carga (lambida) neste passo: " << lambida << std::endl;
@@ -669,7 +677,7 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
         // }
 
         float u_atual = d(indiceGlobalMonitorado);
-        float p_atual = lambida * cargaTotalRef; // Força aplicada neste passo
+        float p_atual = lambda * cargaTotalRef; // Força aplicada neste passo
         
         historicoDeslocamentos.push_back({ abs(u_atual), abs(p_atual) }); 
 

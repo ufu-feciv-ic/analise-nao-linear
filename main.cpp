@@ -283,6 +283,9 @@ int main()
 
     est.calcularPontosDeformadaEstrutura(escalaVisualizacao);
 
+    std::cout << "Reaçoes" << std::endl;
+    std::cout << est.R << std::endl;
+
     // est.resolverSistemaEsparsa();
     // est.calcularPontosDeformadaEstrutura(10e1);
 
