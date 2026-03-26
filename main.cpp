@@ -198,72 +198,185 @@ int main()
     // float escalaMaxima = 10e4;
     // const float velocidadeAnimacao = 1.0f;
 
-    // Parâmetros numéricos do solver
-    float Pmax = 82904.67 * 0.95; // [N]
-    int passos = 60; // número de passos de carga até chegar em Pmax
-    int maxIter = 200; // máximo de iterações de Newton por passo
-    float tol = 1.0f; // tolerância para norma de resíduo 
-    float deslocMax = 10.0f; // [m] deslocamento máximo para o nó monitorado
-    float espessura = 6.0f; // espessura para o desenho da linha 
+    // // Parâmetros numéricos do solver
+    // float Pmax = 82904.67 * 0.95; // [N]
+    // int passos = 60; // número de passos de carga até chegar em Pmax
+    // int maxIter = 200; // máximo de iterações de Newton por passo
+    // float tol = 1.0f; // tolerância para norma de resíduo 
+    // float deslocMax = 10.0f; // [m] deslocamento máximo para o nó monitorado
+    // float espessura = 6.0f; // espessura para o desenho da linha 
 
-    // Propriedades do material/seção
-    float modElast = 210E9; // [Pa] módulo de elasticidade
-    float area = 1e-4; // [m²] área
-    float inercia = 1e-6; // [m4] momento de inércia
+    // // Propriedades do material/seção
+    // float modElast = 210E9; // [Pa] módulo de elasticidade
+    // float area = 1e-4; // [m²] área
+    // float inercia = 1e-6; // [m4] momento de inércia
 
-    // Geometria 
-    float comprimento = 5.0f; // [m] comprimento total da coluna
-    float delta0 = 0.01f; // [m] amplitude de imperfeição inicial lateral
-    int numDivBarra = 20; // numero de elementos ao longo da coluna
+    // // Geometria 
+    // float comprimento = 5.0f; // [m] comprimento total da coluna
+    // float delta0 = 0.01f; // [m] amplitude de imperfeição inicial lateral
+    // int numDivBarra = 20; // numero de elementos ao longo da coluna
 
-    for (int i = 0; i <= numDivBarra; i++)
-    {
-        float t = (float)i / numDivBarra;
-        float y = comprimento * t;
+    // for (int i = 0; i <= numDivBarra; i++)
+    // {
+    //     float t = (float)i / numDivBarra;
+    //     float y = comprimento * t;
 
-        float x = 0.0f;
-        float w = delta0 * sinf(3.14159265f * t); // imperfeição senoidal
+    //     float x = 0.0f;
+    //     float w = delta0 * sinf(3.14159265f * t); // imperfeição senoidal
 
-        bool fixoX = (i == 0) || (i == numDivBarra); // Fixar X
-        bool fixoY = (i == 0); // Fixar Y apenas na base
+    //     bool fixoX = (i == 0) || (i == numDivBarra); // Fixar X
+    //     bool fixoY = (i == 0); // Fixar Y apenas na base
 
-        float fy = (i == numDivBarra) ? -Pmax : 0.0f; // carga concentrada na ponta
+    //     float fy = (i == numDivBarra) ? -Pmax : 0.0f; // carga concentrada na ponta
 
-        est.adicionarNo({x + w, y, 0, fy, 0, fixoX, fixoY, 0});
-    }
+    //     est.adicionarNo({x + w, y, 0, fy, 0, fixoX, fixoY, 0});
+    // }
 
-    Eigen::VectorXf desl;
+    // Eigen::VectorXf desl;
 
-    // Cria as conexões entre os nós em sequência
-    for (size_t i = 0; i < est.nos.size() - 1; i++)
-    {
-        est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
-        desl.resize(est.nos.size() * 3);
-        desl.setZero();
-    }
+    // // Cria as conexões entre os nós em sequência
+    // for (size_t i = 0; i < est.nos.size() - 1; i++)
+    // {
+    //     est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    //     desl.resize(est.nos.size() * 3);
+    //     desl.setZero();
+    // }
 
 
-    int idNoMonitorado = est.nos.back().id; // nó monitorado (ponta da coluna)
+    // int idNoMonitorado = est.nos.back().id; // nó monitorado (ponta da coluna)
+
+    // =========================================================================
+    // IMPLEMENTAÇÃO: BARRA (SNAP-THROUGH 1-DOF) - Ref: BarraNLGCA.py
+    // =========================================================================
+
+    // // Parâmetros numéricos do solver (Método do Comprimento de Arco)
+    // int nmax = 22;          // Número de passos (nmax no Python)
+    // int kmax = 150;         // Iterações máximas por passo
+    // float tol = 1e-10f;     // Tolerância
+    // float deltal0 = 1.2f;   // Comprimento de arco inicial
+    // int kd = 5;             // Iterações desejadas para ajuste do passo
+
+    // // Propriedades do material/seção
+    // float modElast = 5e7f;  // E0
+    // float area = 1.0f;      // A
+    // // Usamos uma inércia minúscula para simular uma treliça (sem resistência à flexão)
+    // float inercia = 1e-12f; 
+    // float espessura = 4.0f; // Espessura para o desenho
+
+    // // Geometria inicial
+    // float L0_x = 2500.0f;
+    // float z_y = 25.0f;
+    
+    // // Carga de referência (negativa para baixo, conforme Python)
+    // float Fr = -7.0f;
+
+    // // 1. Criando os Nós
+    // // Nó 0: Base (0, 0) - Rotulado (Fixo em X e Y, Livre para girar em Z)
+    // est.adicionarNo({0.0f, 0.0f, 0.0f, 0.0f, 0.0f, true, true, false});
+
+    // // Nó 1: Ponta (2500, 25) - Fixo em X, Livre em Y (onde aplica a carga), Livre em Z
+    // // Como queremos que ele desça verticalmente, fixoX = true
+    // est.adicionarNo({L0_x, z_y, 0.0f, Fr, 0.0f, true, false, false});
+
+    // // 2. Criando a Barra
+    // est.adicionarBarra(est.nos[0], est.nos[1], est.nos[0].id, est.nos[1].id, modElast, area, inercia, espessura);
+
+    // // 3. Monitoramento
+    // int idNoMonitorado = est.nos[1].id; // Monitorando o nó da ponta
+    // int grauLiberdade = 1; // 1 representa o deslocamento vertical (Y)
+
+
+    // est.historicoDeslocamentos.clear();
+    // est.historicoDeslocamentos.push_back({0.0f, 0.0f});
+
+    // auto startLinear = std::chrono::high_resolution_clock::now();
+    // est.resolverSistema();
+    // auto endLinear = std::chrono::high_resolution_clock::now();
+
+    // std::chrono::duration<double> durationLinear = endLinear - startLinear;
+    // std::cout << "Tempo de resolução do sistema linear: " << durationLinear.count() << " ms." << std::endl;
+
+    // int indiceGlobal = idNoMonitorado * 3 + grauLiberdade;
+    // float uFinal = est.d(indiceGlobal);
+
+    // est.historicoDeslocamentos.push_back({std::abs(uFinal), std::abs(Fr)});
 
     // est.montarMatrizRigidezeForcasInternas(desl);
 
     // est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
     // est.resolverSistema();
 
-    auto startDenso = std::chrono::high_resolution_clock::now();
-    est.resolverSistema();
-    auto endDenso = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationDenso = endDenso - startDenso;
-    std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << " ms." << std::endl;
+    // auto startDenso = std::chrono::high_resolution_clock::now();
+    // est.resolverSistema();
+    // auto endDenso = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> durationDenso = endDenso - startDenso;
+    // std::cout << "Tempo de resolução do sistema denso: " << durationDenso.count() << " ms." << std::endl;
 
-    auto startEsparso = std::chrono::high_resolution_clock::now();
-    est.resolverSistemaEsparsa();
-    auto endEsparso = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
-    std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << " ms." << std::endl;
+    // auto startEsparso = std::chrono::high_resolution_clock::now();
+    // est.resolverSistemaEsparsa();
+    // auto endEsparso = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> durationEsparso = endEsparso - startEsparso;
+    // std::cout << "Tempo de resolução do sistema esparso: " << durationEsparso.count() << " ms." << std::endl;
+
+    // auto startNaolinear = std::chrono::high_resolution_clock::now();
+    // est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
+    // auto endNaoLinear = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> durationNaoLinear = endNaoLinear - startNaolinear;
+    // std::cout << "Tempo de resolução da analise nao linear: " << durationNaoLinear.count() << " s." << std::endl;
+
+    // =========================================================================
+    // IMPLEMENTAÇÃO: PÓRTICO DE WILLIAMS (SNAP-THROUGH)
+    // =========================================================================
+
+    // Parâmetros numéricos do solver (Método do Comprimento de Arco)
+    int nmax = 33;          // Número de passos (nmax no Python)
+    int kmax = 50;          // Iterações máximas por passo
+    float tol = 0.5;      // Tolerância para o resíduo
+    float deltal0 = 0.025f; // Comprimento de arco inicial
+    int kd = 5;             // Iterações desejadas (Nd no Python) para ajuste do passo
+
+    // Propriedades equivalentes (E = 1.0 no Python)
+    float modElast = 1.0f;
+    float area = 1.885e6f;    // Corresponde a EA
+    float inercia = 9.274e3f; // Corresponde a EI
+    float espessura = 4.0f;   // Espessura para renderização
+
+    // Coordenadas exatas do Pórtico
+    std::vector<std::pair<float, float>> coords = {
+        {0.0f, 0.0f}, {2.5872f, 0.0736f}, {5.1744f, 0.1472f}, {7.7616f, 0.2208f},
+        {10.3488f, 0.2944f}, {12.936f, 0.368f}, {15.5232f, 0.2944f}, {18.1104f, 0.2208f},
+        {20.6976f, 0.1472f}, {23.2848f, 0.0736f}, {25.872f, 0.0f}
+    };
+
+    // 1. Criando os Nós
+    for (size_t i = 0; i < coords.size(); i++)
+    {
+        // Engaste perfeito no primeiro e no último nó
+        bool engaste = (i == 0 || i == coords.size() - 1); 
+        
+        // Força de referência (Fr = -1.0) aplicada no ápice (Nó central, índice 5)
+        float fy = (i == 5) ? -1.0f : 0.0f;
+
+        est.adicionarNo({coords[i].first, coords[i].second, 0.0f, fy, 0.0f, engaste, engaste, engaste});
+    }
+
+    // 2. Criando as Barras
+    for (size_t i = 0; i < est.nos.size() - 1; i++)
+    {
+        est.adicionarBarra(est.nos[i], est.nos[i+1], est.nos[i].id, est.nos[i+1].id, modElast, area, inercia, espessura);
+    }
+
+    // 3. Monitoramento
+    int idNoMonitorado = est.nos[5].id; // Monitorando o nó do ápice
+    int grauLiberdade = 1; // 1 representa o deslocamento vertical (Y)
 
     auto startNaolinear = std::chrono::high_resolution_clock::now();
-    est.resolverSistemaNaoLinear(passos, maxIter, tol, deslocMax, idNoMonitorado, 1, Pmax);
+    
+    // ATENÇÃO: Use a função resolverSistemaNaoLinearArco que adaptamos!
+    // Se você ainda não implementou, substitua o nome pela sua função atual, 
+    // mas lembre-se que o Arc-Length é obrigatório para passar do ponto limite.
+    est.resolverSistemaNaoLinearArco(nmax, kmax, tol, deltal0, kd, idNoMonitorado, grauLiberdade);
+    
     auto endNaoLinear = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> durationNaoLinear = endNaoLinear - startNaolinear;
     std::cout << "Tempo de resolução da analise nao linear: " << durationNaoLinear.count() << " s." << std::endl;
@@ -274,7 +387,7 @@ int main()
 
     if (solver)
     {
-        escalaVisualizacao = 10.0f;
+        escalaVisualizacao = 1.0f;
     }
     else
     {
@@ -283,8 +396,8 @@ int main()
 
     est.calcularPontosDeformadaEstrutura(escalaVisualizacao);
 
-    std::cout << "Reaçoes" << std::endl;
-    std::cout << est.R << std::endl;
+    // std::cout << "Reaçoes" << std::endl;
+    // std::cout << est.R << std::endl;
 
     // est.resolverSistemaEsparsa();
     // est.calcularPontosDeformadaEstrutura(10e1);
@@ -386,9 +499,9 @@ int main()
 
                 if (ImGui::CollapsingHeader("Performance do Solver")) 
                 {
-                    ImGui::Text("Tempo Denso: %.4f ms", durationDenso.count());
-                    ImGui::Text("Tempo Esparso: %.4f ms", durationEsparso.count());
-                    ImGui::Text("Tempo Não-Linear: %.4f s", durationNaoLinear.count());
+                    // ImGui::Text("Tempo Denso: %.4f ms", durationDenso.count());
+                    // ImGui::Text("Tempo Esparso: %.4f ms", durationEsparso.count());
+                    // ImGui::Text("Tempo Não-Linear: %.4f s", durationNaoLinear.count());
                 }
 
                 ImGui::End();

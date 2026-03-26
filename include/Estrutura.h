@@ -102,6 +102,7 @@ public:
     void montarMatrizRigidezeForcasInternas(Eigen::VectorXf d);
     void resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo, 
     int noMonitoradoId, int grauLiberdade, float cargaTotalRef);
+    void resolverSistemaNaoLinearArco(int nmax, int kmax, float tol, float delta0, int kd, int noMonitoradoId, int grauLiberdade);
 
     void calcularMatrizRigidezEstruturaEsparsa();
     void aplicarCondicoesDeContornoEsparsa();

@@ -688,6 +688,149 @@ int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
        
 }
 
+void Estrutura::resolverSistemaNaoLinearArco(int nmax, int kmax, float tol, float deltal0, int kd, int noMonitoradoId, int grauLiberdade)
+{
+    std::cout << "\n--- Iniciando Análise Não-Linear: Método Arc-Length ---" << std::endl;
+
+    // 1. Configuração Inicial
+    montarVetorForcas(); 
+    Eigen::VectorXf P_ref = P; // P_ref é a carga de referência (seu 'Fr' do Python)
+    
+    d.resize(nos.size() * 3);
+    d.setZero();
+    
+    float lambda_val = 0.0f; // Fator de carga atual
+    float deltal = deltal0;  // Comprimento de arco atual
+    
+    Eigen::VectorXf delta_d(nos.size() * 3); delta_d.setZero(); // Incremento de deslocamento total no passo
+    Eigen::VectorXf du_prev(nos.size() * 3); du_prev.setZero(); // Guarda deslocamento anterior para direção
+    
+    historicoDeslocamentos.clear();
+    historicoDeslocamentos.push_back({0.0f, 0.0f});
+    int indiceGlobalMonitorado = noMonitoradoId * 3 + grauLiberdade;
+
+    // Loop de Passos de Carga (nmax)
+    for (int step = 1; step <= nmax; step++)
+    {
+        // ==========================================
+        // PASSO PREDITOR (O "Chute" Tangencial)
+        // ==========================================
+        
+        montarMatrizRigidezeForcasInternas(d); // Atualiza Matriz S Tangente e Fint baseados no 'd' atual
+        
+        Eigen::VectorXf P_aux = P_ref;
+        
+        // Aplicação manual das Condições de Contorno para o preditor
+        for (int n = 0; n < (int)nos.size(); n++) {
+            const auto& no = nos[n];
+            if (no.fixoX) { int gln = n * 3;     S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; }
+            if (no.fixoY) { int gln = n * 3 + 1; S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; }
+            if (no.rotaZ) { int gln = n * 3 + 2; S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; }
+        }
+
+        // Solução Tangencial do Preditor: dur = inv(K) * Pref
+        Eigen::LLT<Eigen::MatrixXf> llt(S);
+        if (llt.info() != Eigen::Success) {
+            std::cout << "Falha na decomposição preditora. Matriz singular." << std::endl;
+            break;
+        }
+        Eigen::VectorXf dur = llt.solve(P_aux); 
+        
+        // Determinação do dlambda inicial (Arc-Length)
+        float dlambda = deltal / dur.norm(); 
+        
+        // Verificação de direção (evita voltar na curva no snap-through ou snap-back)
+        if (step > 1 && du_prev.dot(dur) < 0) {
+            dlambda = -dlambda;
+        }
+        
+        // Atualização preditora
+        delta_d = dlambda * dur;
+        Eigen::VectorXf du0 = delta_d; // Guarda du0 para a restrição de ortogonalidade
+        
+        lambda_val += dlambda;
+        d += delta_d;
+        
+        // ==========================================
+        // CICLO CORRETOR (Newton-Raphson Iterativo)
+        // ==========================================
+        int k = 0;
+        bool convergiu = false;
+        
+        while (k < kmax)
+        {
+            k++;
+            
+            // Recalcula rigidez e forças com o novo 'd'
+            montarMatrizRigidezeForcasInternas(d); 
+            
+            // Cálculo do Resíduo (Forças Desequilibradas): g = lambda * Pref - Fint
+            Eigen::VectorXf g = (lambda_val * P_ref) - Fint; 
+            
+            P_aux = P_ref;
+            Eigen::VectorXf g_aux = g;
+            
+            // Condições de contorno simultâneas para P_aux e g_aux
+            for (int n = 0; n < (int)nos.size(); n++) {
+                const auto& no = nos[n];
+                if (no.fixoX) { int gln = n * 3;     S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; g_aux(gln) = 0.0f; }
+                if (no.fixoY) { int gln = n * 3 + 1; S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; g_aux(gln) = 0.0f; }
+                if (no.rotaZ) { int gln = n * 3 + 2; S.row(gln).setZero(); S.col(gln).setZero(); S(gln, gln) = 1.0f; P_aux(gln) = 0.0f; g_aux(gln) = 0.0f; }
+            }
+            
+            // Critério de Convergência baseado na norma do resíduo global
+            if (g_aux.norm() <= tol) {
+                convergiu = true;
+                break;
+            }
+            
+            // Resolve os deslocamentos corretivos
+            llt.compute(S);
+            Eigen::VectorXf dug = llt.solve(g_aux); // Deslocamento devido ao resíduo
+            dur = llt.solve(P_aux);                 // Deslocamento devido à carga
+            
+            // Correção do Lambda (Método do Hiperplano Ortogonal)
+            // Em vetor: dlambda_corr = - (du0 . dug) / (du0 . dur)
+            float dlambda_corr = -(du0.dot(dug)) / (du0.dot(dur));
+            
+            // Subincremento total do passo corretor
+            Eigen::VectorXf ddu = dlambda_corr * dur + dug;
+            
+            // Atualiza totais
+            delta_d += ddu;
+            d += ddu;
+            lambda_val += dlambda_corr;
+        }
+        
+        if (!convergiu) {
+            std::cout << "\nNao convergiu no passo " << step << " após " << kmax << " iteracoes!" << std::endl;
+            break;
+        }
+        
+        du_prev = delta_d; // Atualiza a direção anterior para o próximo passo preditor
+        
+        // Ajuste automático do comprimento de arco (Heurística)
+        if (k > 0) {
+            deltal = deltal0 * sqrt((float)kd / k);
+        } else {
+            deltal = deltal0;
+        }
+        
+        // Coletar dados para o gráfico (Histórico)
+        float u_atual = d(indiceGlobalMonitorado);
+        float carga_atual = lambda_val; // Multiplicado no momento de plotar ou usar direto como fator
+        
+        historicoDeslocamentos.push_back({ abs(u_atual), abs(carga_atual) }); 
+        
+        std::cout << "Passo " << step << "/" << nmax 
+                  << " | Iter: " << k 
+                  << " | Lambda: " << lambda_val 
+                  << " | u_monit: " << u_atual << std::endl;
+    }
+    
+    std::cout << "\nAnalise Arc-Length concluida." << std::endl;
+}
+
 /**
  * @brief Monta a matriz de rigidez global esparsa da estrutura (SSparse).
  * * Documentação:
