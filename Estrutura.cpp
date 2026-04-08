@@ -22,6 +22,7 @@ Barra::Barra(const No& noi_, const No& nof_, float modElast_, float area_, float
 : noi(noi_), nof(nof_), noInicialId(noi_.id), noFinalId(nof_.id), modElast(modElast_), area(area_), inercia(inercia_), esp(esp_)
 {
     comprimento = sqrt(pow(nof.x - noi.x, 2) + pow(nof.y - noi.y, 2));
+    comprimentoInicial = comprimento;
     
     kLocal.setZero();
     T.setZero();
@@ -589,6 +590,134 @@ void Estrutura::montarMatrizRigidezeForcasInternas(Eigen::VectorXf d)
     //           << Fint << std::endl;
 }
 
+void Estrutura::montarMatrizTangente(Eigen::VectorXf d)
+{
+    S.resize(nos.size() * 3, nos.size() * 3);
+    S.setZero();
+
+    Fint.resize(nos.size() * 3);
+    Fint.setZero();
+
+    montarBCN();
+
+    for (size_t n = 0; n < barras.size(); n++)
+    {
+        int idNoi = barras[n].noInicialId;
+        int idNof = barras[n].noFinalId;
+
+        float xi0 = nos[idNoi].x;
+        float yi0 = nos[idNoi].y;
+        float xf0 = nos[idNof].x;
+        float yf0 = nos[idNof].y;
+
+        float ui = d(3*idNoi);
+        float vi = d(3*idNoi + 1);
+        float ti = d(3*idNoi + 2);
+
+        float uf = d(3*idNof);
+        float vf = d(3*idNof + 1);
+        float tf = d(3*idNof + 2);
+
+        float xiDef = nos[idNoi].x + ui;
+        float yiDef = nos[idNoi].y + vi;
+
+        float xfDef = nos[idNof].x + uf;
+        float yfDef = nos[idNof].y + vf;
+
+        float dx = xfDef - xiDef;
+        float dy = yfDef - yiDef;
+
+        float comprimentoInical = barras[n].comprimentoInicial;
+        float comprimentoAtual = sqrt(pow(dx, 2) + pow(dy, 2));
+        float cosAtual = dx / comprimentoAtual;
+        float senAtual = dy / comprimentoAtual;
+
+        barras[n].comprimento = comprimentoAtual; 
+
+        float anguloInicial = atan2(yf0 - yi0, xf0 - xi0);
+        float anguloAtual = atan2(yfDef - yiDef, xfDef - xiDef);
+
+        float alfa = anguloAtual - anguloInicial;
+
+        while (alfa > 3.14159265358979323846) alfa -= 2 * 3.14159265358979323846;
+        while (alfa < -3.14159265358979323846) alfa += 2 * 3.14159265358979323846;
+
+        float deltaComprimento = comprimentoAtual - barras[n].comprimentoInicial;
+        float deltaRotação1 = ti - alfa;
+        float deltaRotação2 = tf - alfa;
+
+        float EAL = (barras[n].modElast * barras[n].area) / comprimentoInical;
+        float EIL = (barras[n].modElast * barras[n].inercia) / comprimentoInical;
+
+        float Normal = EAL * deltaComprimento;
+        float Momento1 = EIL * deltaRotação1;
+        float Momento2 = EIL * deltaRotação2;
+
+        // 8. Matriz de Transformação Corrotacional (B)
+        // Essa matriz relaciona os 3 graus de liberdade naturais (N, M1, M2)
+        // com os 6 graus de liberdade globais (ui, vi, ti, uf, vf, tf)
+        Eigen::Matrix<float, 3, 6> B;
+        B.setZero();
+        B(0, 0) = -cosAtual;       B(0, 1) = -senAtual;       B(0, 2) = 0.0f;
+        B(0, 3) =  cosAtual;       B(0, 4) =  senAtual;       B(0, 5) = 0.0f;
+
+        B(1, 0) = -senAtual / comprimentoAtual; B(1, 1) =  cosAtual / comprimentoAtual; B(1, 2) = 1.0f;
+        B(1, 3) =  senAtual / comprimentoAtual; B(1, 4) = -cosAtual / comprimentoAtual; B(1, 5) = 0.0f;
+
+        B(2, 0) = -senAtual / comprimentoAtual; B(2, 1) =  cosAtual / comprimentoAtual; B(2, 2) = 0.0f;
+        B(2, 3) =  senAtual / comprimentoAtual; B(2, 4) = -cosAtual / comprimentoAtual; B(2, 5) = 1.0f;
+
+        // 9. Cálculo das Forças Internas Globais (Fint = B^T * ForcasNaturais)
+        Eigen::Matrix<float, 3, 1> forcasNaturais;
+        forcasNaturais << Normal, Momento1, Momento2;
+        
+        barras[n].Fglobal = B.transpose() * forcasNaturais;
+
+        // 10. Matriz de Rigidez Tangente (KT = Ke + Kg)
+        // 10a. Rigidez Elástica atualizada (B^T * Knat * B)
+        Eigen::Matrix<float, 3, 3> Knat;
+        Knat.setZero();
+        Knat(0, 0) = EAL;
+        Knat(1, 1) = 4.0f * EIL;  Knat(1, 2) = 2.0f * EIL;
+        Knat(2, 1) = 2.0f * EIL;  Knat(2, 2) = 4.0f * EIL;
+
+        Eigen::Matrix<float, 6, 6> Ke = B.transpose() * Knat * B;
+
+        // 10b. Matriz Geométrica (Kg) baseada no esforço axial
+        // É ela que desestabiliza a estrutura sob compressão
+        Eigen::Matrix<float, 6, 6> Kg;
+        Kg.setZero();
+        float z = Normal / comprimentoAtual;
+
+        Kg(0, 0) =  z * senAtual * senAtual;   Kg(0, 1) = -z * senAtual * cosAtual;   
+        Kg(1, 0) = -z * senAtual * cosAtual;   Kg(1, 1) =  z * cosAtual * cosAtual;   
+
+        Kg(0, 3) = -z * senAtual * senAtual;   Kg(0, 4) =  z * senAtual * cosAtual;
+        Kg(1, 3) =  z * senAtual * cosAtual;   Kg(1, 4) = -z * cosAtual * cosAtual;
+
+        Kg(3, 0) = -z * senAtual * senAtual;   Kg(3, 1) =  z * senAtual * cosAtual;
+        Kg(4, 0) =  z * senAtual * cosAtual;   Kg(4, 1) = -z * cosAtual * cosAtual;
+
+        Kg(3, 3) =  z * senAtual * senAtual;   Kg(3, 4) = -z * senAtual * cosAtual;
+        Kg(4, 3) = -z * senAtual * cosAtual;   Kg(4, 4) =  z * cosAtual * cosAtual;
+
+        // 11. Montagem Final da Matriz da Barra
+        barras[n].KGlobal = Ke + Kg;
+
+        for (int i = 0; i < 6; i++)
+        {
+            Fint(BCN[n][i]) += barras[n].Fglobal(i);
+            for (int j = 0; j < 6; j++)
+            {
+                S(BCN[n][i], BCN[n][j]) += barras[n].KGlobal(i, j);
+            }
+
+            R(BCN[n][i]) += barras[n].Fglobal(i);
+        }
+    }
+
+}
+
 void Estrutura::resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo, 
 int noMonitoradoId, int grauLiberdade, float cargaTotalRef)
 {
@@ -716,7 +845,7 @@ void Estrutura::resolverSistemaNaoLinearArco(int nmax, int kmax, float tol, floa
         // PASSO PREDITOR (O "Chute" Tangencial)
         // ==========================================
         
-        montarMatrizRigidezeForcasInternas(d); // Atualiza Matriz S Tangente e Fint baseados no 'd' atual
+        montarMatrizTangente(d); // Atualiza Matriz S Tangente e Fint baseados no 'd' atual
         
         Eigen::VectorXf P_aux = P_ref;
         

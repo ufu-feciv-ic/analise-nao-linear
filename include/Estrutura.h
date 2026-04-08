@@ -34,6 +34,7 @@ public:
     int noInicialId;
     int noFinalId;
     float comprimento;
+    float comprimentoInicial;
     float modElast;
     float area;
     float inercia;
@@ -100,6 +101,7 @@ public:
     void calcularPontosDeformadaEstrutura(float fatorEscala);
     void resolverSistema();
     void montarMatrizRigidezeForcasInternas(Eigen::VectorXf d);
+    void montarMatrizTangente(Eigen::VectorXf d);
     void resolverSistemaNaoLinear(int passos, int maxIteracoes, float tolerancia, float deslocamentoMaximo, 
     int noMonitoradoId, int grauLiberdade, float cargaTotalRef);
     void resolverSistemaNaoLinearArco(int nmax, int kmax, float tol, float delta0, int kd, int noMonitoradoId, int grauLiberdade);
