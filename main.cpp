@@ -29,6 +29,7 @@ public:
     virtual ~ElementoFinito() = default;
     virtual std::vector<int> getGDLsGlobais() const = 0;
     virtual Eigen::MatrixXd getMatrizRigidezGlobal(const Eigen::VectorXd& uGlobal) const = 0;
+    virtual Eigen::MatrixXd getForcasInternasGlobais(const Eigen::VectorXd& uGlobal) const = 0;
 };
 
 class Viga2DLinear : public ElementoFinito
@@ -57,7 +58,7 @@ public:
         return GDLs;
     }
 
-    Eigen::MatrixXd getMatrizRigidezGlobal (const Eigen::VectorXd& uGlobal) const override
+    Eigen::MatrixXd calcularkLocal() const
     {
         // Parâmetros 
         double EAL = (material.E * material.A) / Linicial;
@@ -75,7 +76,11 @@ public:
             0, -12*EIL3, -6*EIL2, 0, 12*EIL3, -6*EIL2,
             0, 6*EIL2, 2*EIL, 0, -6*EIL2, 4*EIL;
 
-        // Matriz de transformação das coordenadas locais para globais
+        return kLocal;
+    }
+
+    Eigen::MatrixXd calcularTransformacao() const
+    {
         Eigen::MatrixXd T = Eigen::MatrixXd::Zero(6, 6);
         T << 
             cosInicial, senInicial, 0, 0, 0, 0,
@@ -84,9 +89,44 @@ public:
             0, 0, 0, cosInicial, senInicial, 0,
             0, 0, 0, -senInicial, cosInicial, 0,
             0, 0, 0, 0, 0, 1;
-        
+
+        return T;
+    }
+
+    Eigen::MatrixXd getMatrizRigidezGlobal (const Eigen::VectorXd& uGlobal) const override
+    {
+        // Matriz de rigidez local da barra
+        Eigen::MatrixXd kLocal = calcularkLocal();
+
+        // Matriz de transformação das coordenadas locais para globais
+        Eigen::MatrixXd T = calcularTransformacao();
+
         // Cálculo da matriz de rigidez em coordenadas globais
         return T.transpose() * kLocal * T;    
+    }
+
+    Eigen::MatrixXd getForcasInternasGlobais (const Eigen::VectorXd& uGlobal) const override
+    {
+        std::vector<int> GLDs = getGDLsGlobais();
+        Eigen::VectorXd uGlobalElem = Eigen::VectorXd::Zero(6);
+
+        for (int i = 0; i < 6; ++i)
+        {
+            uGlobalElem(i) = uGlobal(GLDs[i]);
+        }
+
+        // Matriz de rigidez local da barra
+        Eigen::MatrixXd kLocal = calcularkLocal();
+
+        // Matriz de transformação das coordenadas locais para globais
+        Eigen::MatrixXd T = calcularTransformacao();
+
+        // Global para local
+        Eigen::VectorXd uLocal = T * uGlobalElem;
+        Eigen::VectorXd fLocal = kLocal * uLocal;
+        
+        // Forças internas para global
+        return T.transpose() * fLocal;
     }
 };
 
@@ -145,11 +185,28 @@ public:
 
         return KGlobalEst;
     }
+
+    static Eigen::VectorXd montarForcasInternasGlobais (const Estrutura& est, const Eigen::VectorXd& uGlobal)
+    {
+        Eigen::VectorXd FGlobal = Eigen::VectorXd::Zero(est.NumGDLs);
+
+        for (const auto& elemento : est.Elementos)
+        {
+            Eigen::VectorXd FGlobalElem = elemento->getForcasInternasGlobais(uGlobal);
+            std::vector<int> GDLs = elemento->getGDLsGlobais();
+
+            for (size_t i = 0; i < GDLs.size(); ++i)
+                FGlobal(GDLs[i]) += FGlobalElem(i);
+        }
+
+        return FGlobal;
+    }
 };
 
 struct Resultado
 {
     Eigen::VectorXd u;
+    Eigen::VectorXd F;
     double FatorCarga;
 };
 
@@ -201,6 +258,83 @@ public:
     }
 };
 
+class AnaliseNaoLinear : public EstrategiaAnalise
+{
+private:
+    int numPassos;
+    int maxIter;
+    double tol;
+
+public:
+    AnaliseNaoLinear(int passos = 10, int iteracoes = 50, double tolerancia = 1e-6)
+    : numPassos(passos), maxIter(iteracoes), tol(tolerancia) {}
+
+    std::vector<Resultado> executar(Estrutura& est) override
+    {
+        std::cout << "--- Iniciando Solver Newton-Raphson ---\n";
+        std::vector<Resultado> historico;
+
+        Eigen::VectorXd uAtual = Eigen::VectorXd::Zero(est.NumGDLs);
+        historico.push_back({uAtual, Eigen::VectorXd::Zero(est.NumGDLs), 0.0});
+
+        // Loop incremental
+        for (int passo = 1; passo <= numPassos; ++passo)
+        {
+            // Cálculo do fator de carga
+            double lambda = (double)passo / numPassos;
+            Eigen::VectorXd PassoCarga = lambda * est.ForcasExternas;
+
+            int iter = 0;
+            double erro = 1.0;
+
+            // Loop iterativo
+            while (iter < maxIter)
+            {
+                // Coletar matriz tangente e forças internas
+                Eigen::MatrixXd KTangente = Construtor::montarMatrizRigidezGlobal(est, uAtual);
+                Eigen::MatrixXd Fint = Construtor::montarForcasInternasGlobais(est, uAtual);
+
+                // Calcular vetor de forças residuais
+                Eigen::VectorXd g = PassoCarga - Fint;
+
+                // Zerar o resíduo nos graus de liberdade fixos
+                for (int dof : est.NosFixos)
+                    g(dof) = 0.0;
+                
+                
+                // Critérios de parada
+                erro = g.norm();
+
+                if (erro < tol) break;
+
+                // Aplicar condições de contorno
+                est.aplicarCondicoesContorno(KTangente, g);
+
+                // Resolver o sistema 
+                Eigen::VectorXd deltaU = KTangente.ldlt().solve(g);
+
+                // Atualizar deslocamentos 
+                uAtual += deltaU;
+                iter++;
+            }
+
+            if (iter > maxIter) 
+            {
+                std::cout << "AVISO: Passo " << passo << " nao convergiu!\n";
+            }
+            else
+            {
+                std::cout << "Passo " << passo << " (Lambda=" << lambda
+                          << ") convergiu em " << iter << " iteracoes. Erro final: " << erro << "\n";
+            }
+
+            historico.push_back(Resultado{uAtual, PassoCarga, lambda});
+        }
+
+        return historico;
+    }
+};
+
 int main()
 {
     std::cout << "--- TESTE ETAPA 3: SOLVER E CONDICOES DE CONTORNO ---\n\n";
@@ -227,9 +361,9 @@ int main()
     est.ForcasExternas(4) = -1000.0;
     
     // Resolução
-    AnaliseLinear analiseEstrutural;
+    AnaliseNaoLinear analiseEstrutural;
     std::vector<Resultado> historico = analiseEstrutural.executar(est);
-    Eigen::VectorXd uFinal = historico[0].u;
+    Eigen::VectorXd uFinal = historico.back().u;
 
     // Resultados 
     std::cout << "\nDeslocamentos finais (Vetor u):\n";
