@@ -1,9 +1,17 @@
+#define _USE_MATH_DEFINES
 #include <iostream>
 #include <vector>
 #include <memory>
 #include <cmath>
 
 #include "eigenpch.h"
+
+double normalizaAngulo (double angulo)
+{
+    double a = std::fmod(angulo + M_PI, 2.0 * M_PI);
+    if (a < 0.0) a += 2 * M_PI;
+    return a - M_PI;
+};
 
 struct PropriedadesMaterial
 {
@@ -29,7 +37,7 @@ public:
     virtual ~ElementoFinito() = default;
     virtual std::vector<int> getGDLsGlobais() const = 0;
     virtual Eigen::MatrixXd getMatrizRigidezGlobal(const Eigen::VectorXd& uGlobal) const = 0;
-    virtual Eigen::MatrixXd getForcasInternasGlobais(const Eigen::VectorXd& uGlobal) const = 0;
+    virtual Eigen::VectorXd getForcasInternasGlobais(const Eigen::VectorXd& uGlobal) const = 0;
 };
 
 class Viga2DLinear : public ElementoFinito
@@ -105,7 +113,7 @@ public:
         return T.transpose() * kLocal * T;    
     }
 
-    Eigen::MatrixXd getForcasInternasGlobais (const Eigen::VectorXd& uGlobal) const override
+    Eigen::VectorXd getForcasInternasGlobais (const Eigen::VectorXd& uGlobal) const override
     {
         std::vector<int> GLDs = getGDLsGlobais();
         Eigen::VectorXd uGlobalElem = Eigen::VectorXd::Zero(6);
@@ -127,6 +135,132 @@ public:
         
         // Forças internas para global
         return T.transpose() * fLocal;
+    }
+};
+
+class Viga2DCorrotacional : public ElementoFinito
+{
+private: 
+    std::shared_ptr<No> n1, n2;
+    PropriedadesMaterial mat;
+    double L0;
+
+public:
+    Viga2DCorrotacional(std::shared_ptr<No> no1, std::shared_ptr<No> no2, PropriedadesMaterial m)
+        : n1(no1), n2(no2), mat(m) {
+        
+        // Calcula o comprimento original (indeslocado) no momento da criação
+        double dx = n2->x - n1->x;
+        double dy = n2->y - n1->y;
+        L0 = std::sqrt(dx * dx + dy * dy);
+    }
+
+    std::vector<int> getGDLsGlobais() const override
+    {
+        std::vector<int> GDLs;
+        GDLs.insert(GDLs.end(), n1->gdlGlobais.begin(), n1->gdlGlobais.end());
+        GDLs.insert(GDLs.end(), n2->gdlGlobais.begin(), n2->gdlGlobais.end());
+        return GDLs;
+    }
+
+    // Calcula a matriz de rigidez global do elemento
+    Eigen::MatrixXd getMatrizRigidezGlobal(const Eigen::VectorXd& uGlobal) const override
+    {
+        std::vector<int> GDLs = getGDLsGlobais();
+        Eigen::VectorXd uGlobalElem = Eigen::VectorXd::Zero(6);
+
+        for (int i = 0; i < 6; ++i) uGlobalElem(i) = uGlobal(GDLs[i]);
+
+        double X1 = n1->x; double Y1 = n1->y;
+        double X2 = n2->x; double Y2 = n2->y;
+
+        // Geometria atualizada
+        double dx = (X2 + uGlobalElem(3)) - (X1 + uGlobalElem(0));
+        double dy = (Y2 + uGlobalElem(4)) - (Y1 + uGlobalElem(1));
+        double L = std::sqrt(dx * dx + dy * dy);
+        if (L < 1e-12) L = 1e-12;
+
+        double C = dx / L;
+        double S = dy / L;
+        double beta0 = std::atan2(Y2 - Y2, X2 - X1);
+        double beta = std::atan2(dy, dx);
+
+        double teta1 = normalizaAngulo(uGlobalElem(2) + beta0 - beta);
+        double teta2 = normalizaAngulo(uGlobalElem(5) + beta0 - beta);
+
+        // Deformação de Green-Lagrange
+        double ul = (L * L - L0 * L0) / (L + L0);
+
+        // Esforços internos locais
+        double N = mat.E * mat.A * ul / L0;
+        double constanteFlexao = 2.0 * mat.E * mat.I / L0;
+        double M1 = constanteFlexao * (2.0 * teta1 * teta2);
+        double M2 = constanteFlexao * (teta1 + 2.0 * teta2);
+
+        // Matriz B de transformação (Trabalha direto do sistema básico 3DOF pro Global 6DOF)
+        Eigen::Matrix<double, 3, 6> B;
+        B.row(0) << -C, -S, 0, C, S, 0;
+        B.row(1) << -S/L, C/L, 1.0, S/L, -C/L, 0.0;
+        B.row(2) << -S/L, C/L, 0.0, S/L, -C/L, 1.0;
+
+        Eigen::Matrix3d D;
+        D << mat.E*mat.A/L0, 0, 0,
+             0, 4.0*mat.E*mat.I/L0, 2.0*mat.E*mat.I/L0,
+             0, 2.0*mat.E*mat.I/L0, 4.0*mat.E*mat.I/L0;
+        
+        // Matriz tangente material 
+        Eigen::Matrix<double, 6, 6> KM = B.transpose() * D * B;
+
+        Eigen::Vector<double, 6> rVec, zVec;
+        rVec << -C, -S, 0, C, S, 0;
+        zVec << S, -C, 0, -S, C, 0;
+
+        // Matrizes Tangentes Geométricas (K_1 e K_2) - Dependem da força atual!
+        Eigen::Matrix<double, 6, 6> K1 = (N / L) * (zVec * zVec.transpose());
+        Eigen::Matrix<double, 6, 6> K2 = ((M1 + M2) / (L * L)) * (rVec * zVec.transpose() + zVec * rVec.transpose());
+
+        return KM + K1 + K2;
+    }
+
+    // Calcula o Vetor de Forças Internas Global (F_int)
+    Eigen::VectorXd getForcasInternasGlobais(const Eigen::VectorXd& uGlobal) const override {
+        std::vector<int> GDLs = getGDLsGlobais();
+        Eigen::Vector<double, 6> uGlobalElem;
+        for (int i = 0; i < 6; ++i) uGlobalElem(i) = uGlobal(GDLs[i]);
+
+        double X1 = n1->x; double Y1 = n1->y;
+        double X2 = n2->x; double Y2 = n2->y;
+
+        double dx = (X2 + uGlobalElem(3)) - (X1 + uGlobalElem(0));
+        double dy = (Y2 + uGlobalElem(4)) - (Y1 + uGlobalElem(1));
+        double L = std::sqrt(dx * dx + dy * dy);
+        if (L < 1e-12) L = 1e-12;
+
+        double C = dx / L; 
+        double S = dy / L;
+        double beta0 = std::atan2(Y2 - Y1, X2 - X1);
+        double beta = std::atan2(dy, dx);
+
+        double teta1 = normalizaAngulo(uGlobalElem(2) + beta0 - beta);
+        double teta2 = normalizaAngulo(uGlobalElem(5) + beta0 - beta);
+        double ul = (L * L - L0 * L0) / (L + L0);
+
+        // Esforços internos locais
+        double N = mat.E * mat.A * ul / L0;
+        double constanteFlexao = 2.0 * mat.E * mat.I / L0;
+        double M1 = constanteFlexao * (2.0 * teta1 * teta2);
+        double M2 = constanteFlexao * (teta1 + 2.0 * teta2);
+
+        Eigen::Vector3d fLocal(N, M1, M2);
+
+        Eigen::Matrix<double, 3, 6> B;
+        B.row(0) << -C, -S, 0, C, S, 0;
+        B.row(1) << -S/L, C/L, 1.0, S/L, -C/L, 0.0;
+        B.row(2) << -S/L, C/L, 0.0, S/L, -C/L, 1.0;
+
+        // O B^T já transforma a força de volta para os eixos X e Y globais reais
+        Eigen::Vector<double, 6> FGlobal = B.transpose() * fLocal;
+        return FGlobal;
     }
 };
 
@@ -337,54 +471,99 @@ public:
 
 int main()
 {
-    std::cout << "--- TESTE ETAPA 3: SOLVER E CONDICOES DE CONTORNO ---\n\n";
+    std::cout << "--- TESTE ETAPA 4.1: GRANDES DEFORMACOES (CORROTACIONAL + NR) ---\n\n";
 
     Estrutura est;
-    PropriedadesMaterial mat = {210E9, 0.01, 0.0001};
+    PropriedadesMaterial mat = {210E9, 0.01, 1e-5};
 
-    // Nó 1: Origem (0, 0)
+    // Nós: Comprimento total de 10 metros, dividido em 2 elementos de 5m
     auto no1 = std::make_shared<No>(1, 0.0, 0.0, std::vector<int>{0, 1, 2});
-    // Nó 2: Na ponta, L = 5 metros
     auto no2 = std::make_shared<No>(2, 5.0, 0.0, std::vector<int>{3, 4, 5});
+    auto no3 = std::make_shared<No>(3, 10.0, 0.0, std::vector<int>{6, 7, 8});
 
     est.adicionarNo(no1);
     est.adicionarNo(no2);
+    est.adicionarNo(no3);
 
-    auto barra = std::make_shared<Viga2DLinear>(no1, no2, mat);
-    est.adicionarElemento(barra);
+    // Elementos
+    auto barra1 = std::make_shared<Viga2DCorrotacional>(no1, no2, mat);
+    auto barra2 = std::make_shared<Viga2DCorrotacional>(no2, no3, mat);
 
-    // Engaste no nó 1
+    est.adicionarElemento(barra1);
+    est.adicionarElemento(barra2);
+
+    // Engaste nó 1
     est.NosFixos = {0, 1, 2};
 
-    // Carga P = -1000 kN vertical no nó 2
+    // Carga alta no no3
     est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
-    est.ForcasExternas(4) = -1000.0;
-    
-    // Resolução
-    AnaliseNaoLinear analiseEstrutural;
+    est.ForcasExternas(7) = 1000.0;
+
+    AnaliseNaoLinear analiseEstrutural{10, 50, 1e-3};
     std::vector<Resultado> historico = analiseEstrutural.executar(est);
+
     Eigen::VectorXd uFinal = historico.back().u;
 
-    // Resultados 
-    std::cout << "\nDeslocamentos finais (Vetor u):\n";
-    std::cout << uFinal << "\n";
+    std::cout << "\n=== RESULTADO FINAL (Lambda 1.0) ===\n";
+    std::cout << "Deslocamento Y na ponta (Deve ser um valor positivo grande): " << uFinal(7) << " m\n";
+    
+    std::cout << "\nO Pulo do Gato Não Linear:\n";
+    std::cout << "Deslocamento X na ponta (Teoria linear diz que eh ZERO): " << uFinal(6) << " m\n";
 
-    // Validação Teórica
-    double P = -1000.0;
-    double L = 5.0;
-    double E = 210E9;
-    double I = 0.0001;
-
-    double flechaTeorica = (P * std::pow(L, 3)) / (3.0 * E * I);
-    double rotacaoTeorica = (P * std::pow(L, 2)) / (2.0 * E * I);
-
-    std::cout << "--- VALIDACAO ANALITICA ---\n";
-    std::cout << "Deslocamento Y no No 2 (Algoritmo): " << std::scientific << uFinal(4) << " m\n";
-    std::cout << "Deslocamento Y no No 2 (Teorico)  : " << std::scientific << flechaTeorica << " m\n";
-    std::cout << "\nRotacao Z no No 2 (Algoritmo)     : " << std::scientific << uFinal(5) << " rad\n";
-    std::cout << "Rotacao Z no No 2 (Teorico)       : " << std::scientific << rotacaoTeorica << " rad\n";
+    if (uFinal(6) < -0.1) {
+        std::cout << "\n-> SUCESSO! O deslocamento X eh negativo. A barra recuou para compensar a curvatura geométrica (Grandes deformacoes comprovadas!).\n";
+    }
 
     return 0;
+
+    // std::cout << "--- TESTE ETAPA 3: SOLVER E CONDICOES DE CONTORNO ---\n\n";
+
+    // Estrutura est;
+    // PropriedadesMaterial mat = {210E9, 0.01, 0.0001};
+
+    // // Nó 1: Origem (0, 0)
+    // auto no1 = std::make_shared<No>(1, 0.0, 0.0, std::vector<int>{0, 1, 2});
+    // // Nó 2: Na ponta, L = 5 metros
+    // auto no2 = std::make_shared<No>(2, 5.0, 0.0, std::vector<int>{3, 4, 5});
+
+    // est.adicionarNo(no1);
+    // est.adicionarNo(no2);
+
+    // auto barra = std::make_shared<Viga2DLinear>(no1, no2, mat);
+    // est.adicionarElemento(barra);
+
+    // // Engaste no nó 1
+    // est.NosFixos = {0, 1, 2};
+
+    // // Carga P = -1000 kN vertical no nó 2
+    // est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
+    // est.ForcasExternas(4) = -1000.0;
+    
+    // // Resolução
+    // AnaliseNaoLinear analiseEstrutural;
+    // std::vector<Resultado> historico = analiseEstrutural.executar(est);
+    // Eigen::VectorXd uFinal = historico.back().u;
+
+    // // Resultados 
+    // std::cout << "\nDeslocamentos finais (Vetor u):\n";
+    // std::cout << uFinal << "\n";
+
+    // // Validação Teórica
+    // double P = -1000.0;
+    // double L = 5.0;
+    // double E = 210E9;
+    // double I = 0.0001;
+
+    // double flechaTeorica = (P * std::pow(L, 3)) / (3.0 * E * I);
+    // double rotacaoTeorica = (P * std::pow(L, 2)) / (2.0 * E * I);
+
+    // std::cout << "--- VALIDACAO ANALITICA ---\n";
+    // std::cout << "Deslocamento Y no No 2 (Algoritmo): " << std::scientific << uFinal(4) << " m\n";
+    // std::cout << "Deslocamento Y no No 2 (Teorico)  : " << std::scientific << flechaTeorica << " m\n";
+    // std::cout << "\nRotacao Z no No 2 (Algoritmo)     : " << std::scientific << uFinal(5) << " rad\n";
+    // std::cout << "Rotacao Z no No 2 (Teorico)       : " << std::scientific << rotacaoTeorica << " rad\n";
+
+    // return 0;
 
     // std::cout << "--- TESTE ETAPA 2: MONTADOR E MODELO DE ESTRUTURA ---\n\n";
 
