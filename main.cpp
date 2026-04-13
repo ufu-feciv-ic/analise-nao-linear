@@ -392,7 +392,7 @@ public:
     }
 };
 
-class AnaliseNaoLinear : public EstrategiaAnalise
+class AnaliseNaoLinearNR : public EstrategiaAnalise
 {
 private:
     int numPassos;
@@ -400,7 +400,7 @@ private:
     double tol;
 
 public:
-    AnaliseNaoLinear(int passos = 10, int iteracoes = 50, double tolerancia = 1e-6)
+    AnaliseNaoLinearNR(int passos = 10, int iteracoes = 50, double tolerancia = 1e-6)
     : numPassos(passos), maxIter(iteracoes), tol(tolerancia) {}
 
     std::vector<Resultado> executar(Estrutura& est) override
@@ -469,6 +469,31 @@ public:
     }
 };
 
+class AnaliseNaoLinearCompArco : public EstrategiaAnalise
+{
+private:
+    int numPassos;
+    double tol;
+
+public:
+    AnaliseNaoLinearCompArco(int maxPassos = 35, double tolerancia = 1e-6)
+    : numPassos(maxPassos), tol(tolerancia) {}
+
+    std::vector<Resultado> executar (Estrutura& est) override
+    {
+        std::cout << "--- Iniciando Solver Arc-Length (Comprimento de Arco) ---\n";
+        std::vector<Resultado> historico;
+
+        int iterMax = 50; // Max de iterações por passo
+        double deltaL0 = 0.05; // Comprimento de arco inicial
+        double iterDesejada = 5.0; // Num de iterações desejadas por passo
+
+        Eigen::VectorXd uAtual = Eigen::VectorXd::Zero(est.NumGDLs);
+        Eigen::VectorXd deltaU = Eigen::VectorXd::Zero(est.NumGDLs);
+
+    }
+};
+
 int main()
 {
     std::cout << "--- TESTE ETAPA 4.1: GRANDES DEFORMACOES (CORROTACIONAL + NR) ---\n\n";
@@ -499,7 +524,7 @@ int main()
     est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
     est.ForcasExternas(7) = 1000.0;
 
-    AnaliseNaoLinear analiseEstrutural{10, 50, 1e-3};
+    AnaliseNaoLinearNR analiseEstrutural{10, 50, 1e-3};
     std::vector<Resultado> historico = analiseEstrutural.executar(est);
 
     Eigen::VectorXd uFinal = historico.back().u;
