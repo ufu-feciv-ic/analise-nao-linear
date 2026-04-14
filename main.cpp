@@ -182,7 +182,7 @@ public:
 
         double C = dx / L;
         double S = dy / L;
-        double beta0 = std::atan2(Y2 - Y2, X2 - X1);
+        double beta0 = std::atan2(Y2 - Y1, X2 - X1);
         double beta = std::atan2(dy, dx);
 
         double teta1 = normalizaAngulo(uGlobalElem(2) + beta0 - beta);
@@ -194,14 +194,14 @@ public:
         // Esforços internos locais
         double N = mat.E * mat.A * ul / L0;
         double constanteFlexao = 2.0 * mat.E * mat.I / L0;
-        double M1 = constanteFlexao * (2.0 * teta1 * teta2);
+        double M1 = constanteFlexao * (2.0 * teta1 + teta2);
         double M2 = constanteFlexao * (teta1 + 2.0 * teta2);
 
         // Matriz B de transformação (Trabalha direto do sistema básico 3DOF pro Global 6DOF)
         Eigen::Matrix<double, 3, 6> B;
-        B.row(0) << -C, -S, 0, C, S, 0;
-        B.row(1) << -S/L, C/L, 1.0, S/L, -C/L, 0.0;
-        B.row(2) << -S/L, C/L, 0.0, S/L, -C/L, 1.0;
+        B << -C,   -S,   0.0,  C,    S,   0.0,
+             -S/L,  C/L, 1.0,  S/L, -C/L, 0.0,
+             -S/L,  C/L, 0.0,  S/L, -C/L, 1.0;
 
         Eigen::Matrix3d D;
         D << mat.E*mat.A/L0, 0, 0,
@@ -248,15 +248,15 @@ public:
         // Esforços internos locais
         double N = mat.E * mat.A * ul / L0;
         double constanteFlexao = 2.0 * mat.E * mat.I / L0;
-        double M1 = constanteFlexao * (2.0 * teta1 * teta2);
+        double M1 = constanteFlexao * (2.0 * teta1 + teta2);
         double M2 = constanteFlexao * (teta1 + 2.0 * teta2);
 
         Eigen::Vector3d fLocal(N, M1, M2);
 
         Eigen::Matrix<double, 3, 6> B;
-        B.row(0) << -C, -S, 0, C, S, 0;
-        B.row(1) << -S/L, C/L, 1.0, S/L, -C/L, 0.0;
-        B.row(2) << -S/L, C/L, 0.0, S/L, -C/L, 1.0;
+        B << -C,   -S,   0.0,  C,    S,   0.0,
+             -S/L,  C/L, 1.0,  S/L, -C/L, 0.0,
+             -S/L,  C/L, 0.0,  S/L, -C/L, 1.0;
 
         // O B^T já transforma a força de volta para os eixos X e Y globais reais
         Eigen::Vector<double, 6> FGlobal = B.transpose() * fLocal;
@@ -473,73 +473,242 @@ class AnaliseNaoLinearCompArco : public EstrategiaAnalise
 {
 private:
     int numPassos;
+    int maxIter;
     double tol;
+    double deltal0;
+    double Nd;
 
 public:
-    AnaliseNaoLinearCompArco(int maxPassos = 35, double tolerancia = 1e-6)
-    : numPassos(maxPassos), tol(tolerancia) {}
+    AnaliseNaoLinearCompArco(
+        int passos = 30,
+        int iteracoes = 50,
+        double tolerancia = 1e-6,
+        double comprimentoArcoInicial = 0.025,
+        double iterDesejadas = 5.0)
+        : numPassos(passos),
+          maxIter(iteracoes),
+          tol(tolerancia),
+          deltal0(comprimentoArcoInicial),
+          Nd(iterDesejadas) {}
 
-    std::vector<Resultado> executar (Estrutura& est) override
+    std::vector<Resultado> executar(Estrutura& est) override
     {
-        std::cout << "--- Iniciando Solver Arc-Length (Comprimento de Arco) ---\n";
+        std::cout << "--- Iniciando Solver Arc-Length ---\n";
+
         std::vector<Resultado> historico;
 
-        int iterMax = 50; // Max de iterações por passo
-        double deltaL0 = 0.05; // Comprimento de arco inicial
-        double iterDesejada = 5.0; // Num de iterações desejadas por passo
-
         Eigen::VectorXd uAtual = Eigen::VectorXd::Zero(est.NumGDLs);
-        Eigen::VectorXd deltaU = Eigen::VectorXd::Zero(est.NumGDLs);
+        Eigen::VectorXd DELTAU = Eigen::VectorXd::Zero(est.NumGDLs);
 
+        double lambda = 0.0;
+        double deltal = deltal0;
+
+        historico.push_back({uAtual, Eigen::VectorXd::Zero(est.NumGDLs), 0.0});
+
+        for (int passo = 1; passo <= numPassos; ++passo)
+        {
+            // =========================
+            // PREDITOR
+            // =========================
+            Eigen::MatrixXd Kt = Construtor::montarMatrizRigidezGlobal(est, uAtual);
+            Eigen::VectorXd dummy = Eigen::VectorXd::Zero(est.NumGDLs);
+            est.aplicarCondicoesContorno(Kt, dummy);
+
+            Eigen::VectorXd deltaUr = Kt.colPivHouseholderQr().solve(est.ForcasExternas);
+
+            double normDur = deltaUr.norm();
+            if (normDur < 1e-12) normDur = 1e-12;
+
+            double DeltaLambda = deltal / normDur;
+
+            if (passo > 1)
+            {
+                if (DELTAU.dot(deltaUr) < 0.0)
+                    DeltaLambda = -DeltaLambda;
+            }
+
+            Eigen::VectorXd deltaU = DeltaLambda * deltaUr;
+            Eigen::VectorXd DELTAU0 = deltaU;
+            DELTAU = deltaU;
+
+            double lambdaTentativo = lambda + DeltaLambda;
+
+            // =========================
+            // CORRETOR
+            // =========================
+            int iter = 0;
+            double erro = 1.0;
+
+            while (iter < maxIter)
+            {
+                Eigen::VectorXd Fint =
+                    Construtor::montarForcasInternasGlobais(est, uAtual + DELTAU);
+
+                Eigen::VectorXd g = lambdaTentativo * est.ForcasExternas - Fint;
+
+                for (int dof : est.NosFixos)
+                    g(dof) = 0.0;
+
+                erro = g.norm();
+                if (erro <= tol)
+                    break;
+
+                Kt = Construtor::montarMatrizRigidezGlobal(est, uAtual + DELTAU);
+                est.aplicarCondicoesContorno(Kt, dummy);
+
+                Eigen::VectorXd deltaUg = Kt.colPivHouseholderQr().solve(g);
+                deltaUr = Kt.colPivHouseholderQr().solve(est.ForcasExternas);
+
+                double topo = DELTAU0.dot(deltaUg);
+                double base = DELTAU0.dot(deltaUr);
+
+                double dlambda = (std::abs(base) < 1e-12) ? 0.0 : -topo / base;
+
+                DELTAU += deltaUg + dlambda * deltaUr;
+                DeltaLambda += dlambda;
+                lambdaTentativo = lambda + DeltaLambda;
+
+                iter++;
+            }
+
+            if (iter >= maxIter)
+            {
+                std::cout << "AVISO: passo " << passo << " nao convergiu. Erro final = "
+                          << erro << "\n";
+            }
+            else
+            {
+                std::cout << "Passo " << passo
+                          << " convergiu em " << iter
+                          << " iteracoes. Lambda = " << lambdaTentativo
+                          << " | Erro = " << erro << "\n";
+            }
+
+            // Aceita o passo
+            uAtual += DELTAU;
+            lambda = lambdaTentativo;
+
+            if (iter > 0)
+                deltal = deltal0 * std::sqrt(Nd / static_cast<double>(iter));
+
+            historico.push_back({uAtual, lambda * est.ForcasExternas, lambda});
+        }
+
+        return historico;
     }
 };
 
 int main()
 {
-    std::cout << "--- TESTE ETAPA 4.1: GRANDES DEFORMACOES (CORROTACIONAL + NR) ---\n\n";
+    std::cout << "--- TESTE ETAPA FINAL: PORTICO DE WILLIAMS (ARC-LENGTH) ---\n\n";
 
     Estrutura est;
-    PropriedadesMaterial mat = {210E9, 0.01, 1e-5};
-
-    // Nós: Comprimento total de 10 metros, dividido em 2 elementos de 5m
-    auto no1 = std::make_shared<No>(1, 0.0, 0.0, std::vector<int>{0, 1, 2});
-    auto no2 = std::make_shared<No>(2, 5.0, 0.0, std::vector<int>{3, 4, 5});
-    auto no3 = std::make_shared<No>(3, 10.0, 0.0, std::vector<int>{6, 7, 8});
-
-    est.adicionarNo(no1);
-    est.adicionarNo(no2);
-    est.adicionarNo(no3);
-
-    // Elementos
-    auto barra1 = std::make_shared<Viga2DCorrotacional>(no1, no2, mat);
-    auto barra2 = std::make_shared<Viga2DCorrotacional>(no2, no3, mat);
-
-    est.adicionarElemento(barra1);
-    est.adicionarElemento(barra2);
-
-    // Engaste nó 1
-    est.NosFixos = {0, 1, 2};
-
-    // Carga alta no no3
-    est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
-    est.ForcasExternas(7) = 1000.0;
-
-    AnaliseNaoLinearNR analiseEstrutural{10, 50, 1e-3};
-    std::vector<Resultado> historico = analiseEstrutural.executar(est);
-
-    Eigen::VectorXd uFinal = historico.back().u;
-
-    std::cout << "\n=== RESULTADO FINAL (Lambda 1.0) ===\n";
-    std::cout << "Deslocamento Y na ponta (Deve ser um valor positivo grande): " << uFinal(7) << " m\n";
     
-    std::cout << "\nO Pulo do Gato Não Linear:\n";
-    std::cout << "Deslocamento X na ponta (Teoria linear diz que eh ZERO): " << uFinal(6) << " m\n";
+    // Propriedades normalizadas clássicas do problema de Williams
+    PropriedadesMaterial mat = {1.0, 1.885e6, 9.274e3};
 
-    if (uFinal(6) < -0.1) {
-        std::cout << "\n-> SUCESSO! O deslocamento X eh negativo. A barra recuou para compensar a curvatura geométrica (Grandes deformacoes comprovadas!).\n";
+    // Coordenadas dos 11 nós (formando o arco suave)
+    std::vector<std::pair<double, double>> coords = {
+        {0.0, 0.0}, {2.5872, 0.0736}, {5.1744, 0.1472}, {7.7616, 0.2208},
+        {10.3488, 0.2944}, {12.936, 0.368}, {15.5232, 0.2944}, {18.1104, 0.2208},
+        {20.6976, 0.1472}, {23.2848, 0.0736}, {25.872, 0.0}
+    };
+
+    // 1. Criando os Nós Dinamicamente (Total de 33 graus de liberdade)
+    int dof_count = 0;
+    for (int i = 0; i < 11; ++i) {
+        auto no = std::make_shared<No>(i, coords[i].first, coords[i].second, 
+                                         std::vector<int>{dof_count, dof_count+1, dof_count+2});
+        est.adicionarNo(no);
+        dof_count += 3;
+    }
+
+    // 2. Conectando 10 Vigas Corrotacionais
+    for (int i = 0; i < 10; ++i) {
+        auto viga = std::make_shared<Viga2DCorrotacional>(est.Nos[i], est.Nos[i+1], mat);
+        est.adicionarElemento(viga);
+    }
+
+    // 3. Condições de Contorno: Engaste total nas duas extremidades
+    // Nó 0 (dofs 0, 1, 2) e Nó 10 (dofs 30, 31, 32)
+    est.NosFixos = {0, 1, 2, 30, 31, 32};
+
+    // 4. Força Externa de Referência (Apertando o nó central para baixo)
+    // O Nó 5 é o ápice do arco. O DOF Y dele é o 16.
+    est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
+    est.ForcasExternas(16) = -1.0;
+
+    // 5. Roda o Arc-Length
+    AnaliseNaoLinearCompArco solver(33, 50, 1e-6, 0.025, 5.0); // 30 passos na curva
+    std::vector<Resultado> history = solver.executar(est);
+
+    // 6. Impressão dos Resultados Normalizados
+    double h_apex = 0.368;
+    
+    std::cout << "\n=== TRACADO DA CURVA DE FLAMBAGEM (SNAP-THROUGH) ===\n";
+    std::cout << " Passo | Desloc (v/h) | Forca Lambda \n";
+    std::cout << "--------------------------------------\n";
+    
+    for (size_t i = 1; i < history.size(); ++i) {
+        double lambda = history[i].FatorCarga;
+        double u_y_apex = history[i].u(16); 
+        
+        // Normalização clássica do paper de Williams
+        double u_normalizado = -u_y_apex / h_apex;
+        double f_normalizada = -lambda * (-1.0); 
+
+        std::cout << std::scientific << i 
+                  << " | " << std::scientific << u_normalizado 
+                  << " | " << std::scientific << f_normalizada 
+                  << "\n";
     }
 
     return 0;
+
+    // std::cout << "--- TESTE ETAPA 4.1: GRANDES DEFORMACOES (CORROTACIONAL + NR) ---\n\n";
+
+    // Estrutura est;
+    // PropriedadesMaterial mat = {210E9, 0.01, 1e-5};
+
+    // // Nós: Comprimento total de 10 metros, dividido em 2 elementos de 5m
+    // auto no1 = std::make_shared<No>(1, 0.0, 0.0, std::vector<int>{0, 1, 2});
+    // auto no2 = std::make_shared<No>(2, 5.0, 0.0, std::vector<int>{3, 4, 5});
+    // auto no3 = std::make_shared<No>(3, 10.0, 0.0, std::vector<int>{6, 7, 8});
+
+    // est.adicionarNo(no1);
+    // est.adicionarNo(no2);
+    // est.adicionarNo(no3);
+
+    // // Elementos
+    // auto barra1 = std::make_shared<Viga2DCorrotacional>(no1, no2, mat);
+    // auto barra2 = std::make_shared<Viga2DCorrotacional>(no2, no3, mat);
+
+    // est.adicionarElemento(barra1);
+    // est.adicionarElemento(barra2);
+
+    // // Engaste nó 1
+    // est.NosFixos = {0, 1, 2};
+
+    // // Carga alta no no3
+    // est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
+    // est.ForcasExternas(7) = 1000.0;
+
+    // AnaliseNaoLinearNR analiseEstrutural{10, 50, 1e-3};
+    // std::vector<Resultado> historico = analiseEstrutural.executar(est);
+
+    // Eigen::VectorXd uFinal = historico.back().u;
+
+    // std::cout << "\n=== RESULTADO FINAL (Lambda 1.0) ===\n";
+    // std::cout << "Deslocamento Y na ponta (Deve ser um valor positivo grande): " << uFinal(7) << " m\n";
+    
+    // std::cout << "\nO Pulo do Gato Não Linear:\n";
+    // std::cout << "Deslocamento X na ponta (Teoria linear diz que eh ZERO): " << uFinal(6) << " m\n";
+
+    // if (uFinal(6) < -0.1) {
+    //     std::cout << "\n-> SUCESSO! O deslocamento X eh negativo. A barra recuou para compensar a curvatura geométrica (Grandes deformacoes comprovadas!).\n";
+    // }
+
+    // return 0;
 
     // std::cout << "--- TESTE ETAPA 3: SOLVER E CONDICOES DE CONTORNO ---\n\n";
 
