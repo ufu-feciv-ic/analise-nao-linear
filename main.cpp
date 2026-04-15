@@ -6,6 +6,11 @@
 
 #include "eigenpch.h"
 
+#include <raylib.h>
+#include "imgui.h"
+#include "implot.h"
+#include "rlImGui.h" 
+
 double normalizaAngulo (double angulo)
 {
     double a = std::fmod(angulo + M_PI, 2.0 * M_PI);
@@ -598,72 +603,319 @@ public:
     }
 };
 
+struct ResultadoPassoUI
+{
+    Eigen::VectorXd udesl;   // deslocamentos globais completos
+    double lambda;           // fator de carga
+    double u_apex;           // deslocamento normalizado v/h
+    double f_apex;           // força equivalente no gráfico
+};
+
+struct ArestaRender
+{
+    int n1;
+    int n2;
+};
+
+std::vector<ResultadoPassoUI> prepararHistoricoUI(
+    const std::vector<Resultado>& history,
+    int dofApexY,
+    double h_apex)
+{
+    std::vector<ResultadoPassoUI> out;
+    out.reserve(history.size());
+
+    for (const auto& step : history)
+    {
+        ResultadoPassoUI s;
+        s.udesl = step.u;
+        s.lambda = step.FatorCarga;
+
+        double u_y_apex = step.u(dofApexY);
+
+        // mesmo critério que você já usa
+        s.u_apex = -u_y_apex / h_apex;
+        s.f_apex = step.FatorCarga; // ou step.FatorCarga
+        // Se quiser o mesmo sinal do seu print:
+        // s.f_apex = -step.FatorCarga * (-1.0);
+
+        out.push_back(s);
+    }
+
+    return out;
+}
+
+Vector2 WorldToScreen(double x, double y, float screenW, float screenH) {
+    float scale = 35.0f; 
+    float offsetX = 100.0f;
+    float offsetY = screenH * 0.7f; 
+    return { static_cast<float>(offsetX + x * scale), static_cast<float>(offsetY - y * scale) };
+}
+
 int main()
 {
     std::cout << "--- TESTE ETAPA FINAL: PORTICO DE WILLIAMS (ARC-LENGTH) ---\n\n";
 
     Estrutura est;
-    
+    std::vector<ArestaRender> arestas;
+
     // Propriedades normalizadas clássicas do problema de Williams
     PropriedadesMaterial mat = {1.0, 1.885e6, 9.274e3};
 
-    // Coordenadas dos 11 nós (formando o arco suave)
+    // Coordenadas dos 11 nós
     std::vector<std::pair<double, double>> coords = {
         {0.0, 0.0}, {2.5872, 0.0736}, {5.1744, 0.1472}, {7.7616, 0.2208},
         {10.3488, 0.2944}, {12.936, 0.368}, {15.5232, 0.2944}, {18.1104, 0.2208},
         {20.6976, 0.1472}, {23.2848, 0.0736}, {25.872, 0.0}
     };
 
-    // 1. Criando os Nós Dinamicamente (Total de 33 graus de liberdade)
+    // Nós
     int dof_count = 0;
     for (int i = 0; i < 11; ++i) {
-        auto no = std::make_shared<No>(i, coords[i].first, coords[i].second, 
-                                         std::vector<int>{dof_count, dof_count+1, dof_count+2});
+        auto no = std::make_shared<No>(
+            i,
+            coords[i].first,
+            coords[i].second,
+            std::vector<int>{dof_count, dof_count + 1, dof_count + 2}
+        );
         est.adicionarNo(no);
         dof_count += 3;
     }
 
-    // 2. Conectando 10 Vigas Corrotacionais
+    // Elementos
     for (int i = 0; i < 10; ++i) {
-        auto viga = std::make_shared<Viga2DCorrotacional>(est.Nos[i], est.Nos[i+1], mat);
+        auto viga = std::make_shared<Viga2DCorrotacional>(est.Nos[i], est.Nos[i + 1], mat);
         est.adicionarElemento(viga);
+        arestas.push_back({i, i + 1});
     }
 
-    // 3. Condições de Contorno: Engaste total nas duas extremidades
-    // Nó 0 (dofs 0, 1, 2) e Nó 10 (dofs 30, 31, 32)
+    // Apoios
     est.NosFixos = {0, 1, 2, 30, 31, 32};
 
-    // 4. Força Externa de Referência (Apertando o nó central para baixo)
-    // O Nó 5 é o ápice do arco. O DOF Y dele é o 16.
+    // Carga externa
     est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
-    est.ForcasExternas(16) = -1.0;
+    est.ForcasExternas(16) = -1.0; // DOF Y do nó 5
 
-    // 5. Roda o Arc-Length
-    AnaliseNaoLinearCompArco solver(33, 50, 1e-6, 0.025, 5.0); // 30 passos na curva
+    // Solver
+    std::cout << "Calculando simulacao...\n";
+    AnaliseNaoLinearCompArco solver(33, 50, 1e-6, 0.025, 5.0);
     std::vector<Resultado> history = solver.executar(est);
+    std::cout << "Simulacao concluida. Abrindo UI...\n";
 
-    // 6. Impressão dos Resultados Normalizados
+    // Preparar dados para a UI
     double h_apex = 0.368;
-    
-    std::cout << "\n=== TRACADO DA CURVA DE FLAMBAGEM (SNAP-THROUGH) ===\n";
-    std::cout << " Passo | Desloc (v/h) | Forca Lambda \n";
-    std::cout << "--------------------------------------\n";
-    
-    for (size_t i = 1; i < history.size(); ++i) {
-        double lambda = history[i].FatorCarga;
-        double u_y_apex = history[i].u(16); 
-        
-        // Normalização clássica do paper de Williams
-        double u_normalizado = -u_y_apex / h_apex;
-        double f_normalizada = -lambda * (-1.0); 
+    int dofApexY = 16;
+    std::vector<ResultadoPassoUI> historyUI = prepararHistoricoUI(history, dofApexY, h_apex);
 
-        std::cout << std::scientific << i 
-                  << " | " << std::scientific << u_normalizado 
-                  << " | " << std::scientific << f_normalizada 
-                  << "\n";
+    std::vector<double> plot_u, plot_f;
+    plot_u.reserve(historyUI.size());
+    plot_f.reserve(historyUI.size());
+
+    for (const auto& step : historyUI) {
+        plot_u.push_back(step.u_apex);
+        plot_f.push_back(step.f_apex);
     }
 
+    // Setup Raylib
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
+    InitWindow(1280, 720, "Williams Frame - Raylib + ImGui + ImPlot");
+    SetTargetFPS(60);
+
+    // Setup ImGui / ImPlot
+    rlImGuiSetup(true);
+    ImPlot::CreateContext();
+
+    int current_step = 0;
+    int max_steps = static_cast<int>(historyUI.size()) - 1;
+
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(Color{40, 40, 45, 255});
+
+        const ResultadoPassoUI& state = historyUI[current_step];
+
+        // =========================================================
+        // DESENHO DA ESTRUTURA
+        // =========================================================
+
+        // Estrutura original
+        for (const auto& e : arestas)
+        {
+            const auto& no1 = est.Nos[e.n1];
+            const auto& no2 = est.Nos[e.n2];
+
+            Vector2 p1 = WorldToScreen(no1->x, no1->y, (float)GetScreenWidth(), (float)GetScreenHeight());
+            Vector2 p2 = WorldToScreen(no2->x, no2->y, (float)GetScreenWidth(), (float)GetScreenHeight());
+
+            DrawLineEx(p1, p2, 1.5f, Color{120, 120, 120, 120});
+        }
+
+        // Estrutura deformada
+        for (const auto& e : arestas)
+        {
+            const auto& no1 = est.Nos[e.n1];
+            const auto& no2 = est.Nos[e.n2];
+
+            int gdl1x = no1->gdlGlobais[0];
+            int gdl1y = no1->gdlGlobais[1];
+            int gdl2x = no2->gdlGlobais[0];
+            int gdl2y = no2->gdlGlobais[1];
+
+            Vector2 p1 = WorldToScreen(
+                no1->x + state.udesl(gdl1x),
+                no1->y + state.udesl(gdl1y),
+                (float)GetScreenWidth(),
+                (float)GetScreenHeight()
+            );
+
+            Vector2 p2 = WorldToScreen(
+                no2->x + state.udesl(gdl2x),
+                no2->y + state.udesl(gdl2y),
+                (float)GetScreenWidth(),
+                (float)GetScreenHeight()
+            );
+
+            DrawLineEx(p1, p2, 3.5f, SKYBLUE);
+            DrawCircleV(p1, 5.0f, WHITE);
+            DrawCircleV(p2, 5.0f, WHITE);
+        }
+
+        // =========================================================
+        // UI
+        // =========================================================
+        rlImGuiBegin();
+
+        ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(350, 170), ImGuiCond_Once);
+        ImGui::Begin("Painel de Controle");
+
+        ImGui::Text("Portico de Williams - Analise Nao Linear");
+        ImGui::Separator();
+
+        ImGui::SliderInt("Passo de Carga", &current_step, 0, max_steps);
+
+        if (ImGui::Button("Anterior") && current_step > 0) current_step--;
+        ImGui::SameLine();
+        if (ImGui::Button("Proximo") && current_step < max_steps) current_step++;
+
+        ImGui::Separator();
+        ImGui::Text("Fator de Carga (Lambda): %.6f", state.lambda);
+        ImGui::Text("Desl. Normalizado (v/h): %.6f", state.u_apex);
+        ImGui::Text("Forca P (normalizada): %.6f", state.f_apex);
+
+        ImGui::End();
+
+        ImGui::SetNextWindowPos(ImVec2((float)GetScreenWidth() - 620.0f, 20.0f), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+        ImGui::Begin("Grafico de Resposta P x v/h");
+
+        if (ImPlot::BeginPlot("Curva de Equilibrio", ImVec2(-1, -1)))
+        {
+            ImPlot::SetupAxes("Deslocamento Normalizado (v/h)", "Forca P");
+
+            // opcional: ajustar automaticamente
+            // ImPlot::SetupAxesLimits(0, 3.0, 0, 1.5, ImGuiCond_Once);
+
+            ImPlot::SetNextLineStyle(ImVec4(0.5f, 0.5f, 0.5f, 0.5f), 1.0f);
+            ImPlot::PlotLine("Caminho Total", plot_u.data(), plot_f.data(), (int)plot_u.size());
+
+            ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), 2.5f);
+            ImPlot::PlotLine("Resposta Atual", plot_u.data(), plot_f.data(), current_step + 1);
+
+            double curr_u = state.u_apex;
+            double curr_f = state.f_apex;
+
+            ImPlot::SetNextMarkerStyle(
+                ImPlotMarker_Circle,
+                5.0f,
+                ImVec4(1, 1, 0, 1),
+                1.0f,
+                ImVec4(1, 1, 0, 1)
+            );
+            ImPlot::PlotScatter("Ponto de Equilibrio", &curr_u, &curr_f, 1);
+
+            ImPlot::EndPlot();
+        }
+
+        ImGui::End();
+
+        rlImGuiEnd();
+        EndDrawing();
+    }
+
+    ImPlot::DestroyContext();
+    rlImGuiShutdown();
+    CloseWindow();
+
     return 0;
+
+    // std::cout << "--- TESTE ETAPA FINAL: PORTICO DE WILLIAMS (ARC-LENGTH) ---\n\n";
+
+    // Estrutura est;
+    
+    // // Propriedades normalizadas clássicas do problema de Williams
+    // PropriedadesMaterial mat = {1.0, 1.885e6, 9.274e3};
+
+    // // Coordenadas dos 11 nós (formando o arco suave)
+    // std::vector<std::pair<double, double>> coords = {
+    //     {0.0, 0.0}, {2.5872, 0.0736}, {5.1744, 0.1472}, {7.7616, 0.2208},
+    //     {10.3488, 0.2944}, {12.936, 0.368}, {15.5232, 0.2944}, {18.1104, 0.2208},
+    //     {20.6976, 0.1472}, {23.2848, 0.0736}, {25.872, 0.0}
+    // };
+
+    // // 1. Criando os Nós Dinamicamente (Total de 33 graus de liberdade)
+    // int dof_count = 0;
+    // for (int i = 0; i < 11; ++i) {
+    //     auto no = std::make_shared<No>(i, coords[i].first, coords[i].second, 
+    //                                      std::vector<int>{dof_count, dof_count+1, dof_count+2});
+    //     est.adicionarNo(no);
+    //     dof_count += 3;
+    // }
+
+    // std::vector<ArestaRender> arestas;
+
+    // // 2. Conectando 10 Vigas Corrotacionais
+    // for (int i = 0; i < 10; ++i) {
+    //     auto viga = std::make_shared<Viga2DCorrotacional>(est.Nos[i], est.Nos[i+1], mat);
+    //     est.adicionarElemento(viga);
+    // }
+
+    // // 3. Condições de Contorno: Engaste total nas duas extremidades
+    // // Nó 0 (dofs 0, 1, 2) e Nó 10 (dofs 30, 31, 32)
+    // est.NosFixos = {0, 1, 2, 30, 31, 32};
+
+    // // 4. Força Externa de Referência (Apertando o nó central para baixo)
+    // // O Nó 5 é o ápice do arco. O DOF Y dele é o 16.
+    // est.ForcasExternas = Eigen::VectorXd::Zero(est.NumGDLs);
+    // est.ForcasExternas(16) = -1.0;
+
+    // // 5. Roda o Arc-Length
+    // AnaliseNaoLinearCompArco solver(33, 50, 1e-6, 0.025, 5.0); // 30 passos na curva
+    // std::vector<Resultado> history = solver.executar(est);
+
+    // // 6. Impressão dos Resultados Normalizados
+    // double h_apex = 0.368;
+    
+    // std::cout << "\n=== TRACADO DA CURVA DE FLAMBAGEM (SNAP-THROUGH) ===\n";
+    // std::cout << " Passo | Desloc (v/h) | Forca Lambda \n";
+    // std::cout << "--------------------------------------\n";
+    
+    // for (size_t i = 1; i < history.size(); ++i) {
+    //     double lambda = history[i].FatorCarga;
+    //     double u_y_apex = history[i].u(16); 
+        
+    //     // Normalização clássica do paper de Williams
+    //     double u_normalizado = -u_y_apex / h_apex;
+    //     double f_normalizada = -lambda * (-1.0); 
+
+    //     std::cout << std::scientific << i 
+    //               << " | " << std::scientific << u_normalizado 
+    //               << " | " << std::scientific << f_normalizada 
+    //               << "\n";
+    // }
+
+    // return 0;
 
     // std::cout << "--- TESTE ETAPA 4.1: GRANDES DEFORMACOES (CORROTACIONAL + NR) ---\n\n";
 
