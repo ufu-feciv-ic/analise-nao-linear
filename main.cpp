@@ -36,6 +36,14 @@ public:
     : id(id), x(x), y(y), gdlGlobais(gdls) {}
 };
 
+struct EsforcosLocais
+{
+    double N; // Força normal
+    double V; // força cortante (constante para cargar nodais)
+    double M1; // Momento fletor no nó 1
+    double M2; // Momento fletor no nó 2
+};
+
 class ElementoFinito
 {
 public:
@@ -43,6 +51,7 @@ public:
     virtual std::vector<int> getGDLsGlobais() const = 0;
     virtual Eigen::MatrixXd getMatrizRigidezGlobal(const Eigen::VectorXd& uGlobal) const = 0;
     virtual Eigen::VectorXd getForcasInternasGlobais(const Eigen::VectorXd& uGlobal) const = 0;
+    virtual EsforcosLocais getEsforcosLocais(const Eigen::VectorXd& uGlobal) const = 0;
 };
 
 class Viga2DLinear : public ElementoFinito
@@ -140,6 +149,28 @@ public:
         
         // Forças internas para global
         return T.transpose() * fLocal;
+    }
+
+    EsforcosLocais getEsforcosLocais(const Eigen::VectorXd& uGlobal) const override 
+    {
+        std::vector<int> GLDs = getGDLsGlobais();
+        Eigen::VectorXd uGlobalElem = Eigen::VectorXd::Zero(6);
+        for (int i = 0; i < 6; ++i) uGlobalElem(i) = uGlobal(GLDs[i]);
+
+        Eigen::MatrixXd kLocal = calcularkLocal();
+        Eigen::MatrixXd T = calcularTransformacao();
+
+        Eigen::VectorXd uLocal = T * uGlobalElem;
+        Eigen::VectorXd fLocal = kLocal * uLocal;
+
+        // Na matriz local: fLocal = [N1, V1, M1, N2, V2, M2]
+        // N é constante (assumimos tração positiva pegando de N2), M1 = fLocal(2), M2 = fLocal(5)
+        double N = fLocal(3); 
+        double V = fLocal(1); // ou -fLocal(4) dependendo da convenção
+        double M1 = fLocal(2);
+        double M2 = fLocal(5);
+
+        return {N, V, M1, M2};
     }
 };
 
@@ -266,6 +297,40 @@ public:
         // O B^T já transforma a força de volta para os eixos X e Y globais reais
         Eigen::Vector<double, 6> FGlobal = B.transpose() * fLocal;
         return FGlobal;
+    }
+
+    EsforcosLocais getEsforcosLocais(const Eigen::VectorXd& uGlobal) const override 
+    {
+        std::vector<int> GDLs = getGDLsGlobais();
+        Eigen::Vector<double, 6> uGlobalElem;
+        for (int i = 0; i < 6; ++i) uGlobalElem(i) = uGlobal(GDLs[i]);
+
+        double X1 = n1->x; double Y1 = n1->y;
+        double X2 = n2->x; double Y2 = n2->y;
+
+        // Comprimento atualizado
+        double dx = (X2 + uGlobalElem(3)) - (X1 + uGlobalElem(0));
+        double dy = (Y2 + uGlobalElem(4)) - (Y1 + uGlobalElem(1));
+        double L = std::sqrt(dx * dx + dy * dy);
+        if (L < 1e-12) L = 1e-12;
+
+        double beta0 = std::atan2(Y2 - Y1, X2 - X1);
+        double beta = std::atan2(dy, dx);
+
+        double teta1 = normalizaAngulo(uGlobalElem(2) + beta0 - beta);
+        double teta2 = normalizaAngulo(uGlobalElem(5) + beta0 - beta);
+        double ul = (L * L - L0 * L0) / (L + L0);
+
+        // Esforços internos locais
+        double N = mat.E * mat.A * ul / L0;
+        double constanteFlexao = 2.0 * mat.E * mat.I / L0;
+        double M1 = constanteFlexao * (2.0 * teta1 + teta2);
+        double M2 = constanteFlexao * (teta1 + 2.0 * teta2);
+        
+        // Cortante obtido por equilíbrio no estado deformado (somatório de momentos = 0)
+        double V = (M1 + M2) / L; 
+
+        return {N, V, M1, M2};
     }
 };
 
@@ -702,6 +767,14 @@ int main()
     std::vector<Resultado> history = solver.executar(est);
     std::cout << "Simulacao concluida. Abrindo UI...\n";
 
+    const Resultado& ultimoPasso = history.back();
+    EsforcosLocais esf = est.Elementos[0]->getEsforcosLocais(ultimoPasso.u);
+
+    std::cout << "\nElemento 0 - Normal: " << esf.N 
+          << ", Cortante: " << esf.V 
+          << ", M1: " << esf.M1 
+          << ", M2: " << esf.M2 << "\n";
+
     // Preparar dados para a UI
     double h_apex = 0.368;
     int dofApexY = 16;
@@ -727,6 +800,9 @@ int main()
 
     int current_step = 0;
     int max_steps = static_cast<int>(historyUI.size()) - 1;
+
+    int tipoDiagrama = 0; // 0-Nenhum, 1-Normal, 2-Cortante, 3-Momento
+    float escalaDiagrama = 0.002f;
 
     while (!WindowShouldClose())
     {
@@ -781,6 +857,75 @@ int main()
             DrawCircleV(p2, 5.0f, WHITE);
         }
 
+        if (tipoDiagrama != 0)
+        {
+            for (size_t i = 0; i < arestas.size(); ++i)
+            {
+                const auto& e = arestas[i];
+                const auto& no1 = est.Nos[e.n1];
+                const auto& no2 = est.Nos[e.n2];
+
+                int gdl1x = no1->gdlGlobais[0]; int gdl1y = no1->gdlGlobais[1];
+                int gdl2x = no2->gdlGlobais[0]; int gdl2y = no2->gdlGlobais[1];
+
+                double x1_def = no1->x + state.udesl(gdl1x);
+                double y1_def = no1->y + state.udesl(gdl1y);
+                double x2_def = no2->x + state.udesl(gdl2x);
+                double y2_def = no2->y + state.udesl(gdl2y);
+
+                // Vetor normal (perpendicular) à barra
+                double dx = x2_def - x1_def;
+                double dy = y2_def - y1_def;
+                double comp = std::hypot(dx, dy);
+                double nx = -dy / comp; 
+                double ny = dx / comp;  
+
+                EsforcosLocais esf = est.Elementos[i]->getEsforcosLocais(state.udesl);
+
+                // Variáveis para armazenar os valores do diagrama nos nós 1 e 2
+                double val1 = 0.0, val2 = 0.0;
+                Color corBorda = BLACK;
+                Color corPreench = BLANK;
+
+                // Define os valores e cores baseado no diagrama selecionado
+                if (tipoDiagrama == 1) { // Normal (Constante)
+                    val1 = esf.N * escalaDiagrama;
+                    val2 = esf.N * escalaDiagrama;
+                    corBorda = GREEN;
+                    corPreench = ColorAlpha(GREEN, 0.4f);
+                } 
+                else if (tipoDiagrama == 2) { // Cortante (Constante)
+                    val1 = esf.V * escalaDiagrama;
+                    val2 = esf.V * escalaDiagrama;
+                    corBorda = ORANGE;
+                    corPreench = ColorAlpha(ORANGE, 0.4f);
+                } 
+                else if (tipoDiagrama == 3) { // Momento (Variavel)
+                    val1 = esf.M1 * escalaDiagrama;
+                    val2 = -esf.M2 * escalaDiagrama; 
+                    corBorda = RED;
+                    corPreench = ColorAlpha(RED, 0.4f);
+                }
+
+                // Pontos na base da barra (tela)
+                Vector2 p1 = WorldToScreen(x1_def, y1_def, (float)GetScreenWidth(), (float)GetScreenHeight());
+                Vector2 p2 = WorldToScreen(x2_def, y2_def, (float)GetScreenWidth(), (float)GetScreenHeight());
+
+                // Pontos do topo do diagrama (tela)
+                Vector2 d1 = WorldToScreen(x1_def + nx * val1, y1_def + ny * val1, (float)GetScreenWidth(), (float)GetScreenHeight());
+                Vector2 d2 = WorldToScreen(x2_def + nx * val2, y2_def + ny * val2, (float)GetScreenWidth(), (float)GetScreenHeight());
+
+                // Desenha o contorno do diagrama
+                DrawLineEx(p1, d1, 2.0f, corBorda);       
+                DrawLineEx(p2, d2, 2.0f, corBorda);       
+                DrawLineEx(d1, d2, 2.0f, corBorda);    
+                
+                // Preenchimento simples hachurado (ligando a base ao topo cruzado)
+                DrawLineEx(p1, d2, 1.0f, corPreench);
+                DrawLineEx(p2, d1, 1.0f, corPreench);
+            }
+        }
+
         // =========================================================
         // UI
         // =========================================================
@@ -798,6 +943,21 @@ int main()
         if (ImGui::Button("Anterior") && current_step > 0) current_step--;
         ImGui::SameLine();
         if (ImGui::Button("Proximo") && current_step < max_steps) current_step++;
+
+        ImGui::Separator();
+        
+        // NOVO: Controles Unificados de Diagramas
+        ImGui::Text("Diagramas de Esforcos:");
+        ImGui::RadioButton("Nenhum", &tipoDiagrama, 0); ImGui::SameLine();
+        ImGui::RadioButton("Normal (N)", &tipoDiagrama, 1); ImGui::SameLine();
+        ImGui::RadioButton("Cortante (V)", &tipoDiagrama, 2); 
+        ImGui::RadioButton("Momento Fletor (M)", &tipoDiagrama, 3);
+        
+        if (tipoDiagrama != 0) {
+            ImGui::SliderFloat("Escala Visual", &escalaDiagrama, 0.0001f, 0.01f, "%.5f");
+        }
+        
+        ImGui::Separator();
 
         ImGui::Separator();
         ImGui::Text("Fator de Carga (Lambda): %.6f", state.lambda);
