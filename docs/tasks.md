@@ -1,9 +1,9 @@
 # Backlog de Implementação: Análise Estrutural
 
 ## Fase 1: Interface e Comunicação 🏗️
-- [ ] Adicionar `AnalysisRequest` e `ResultsViewRequest` em `FrameRequests.h`.
-- [ ] Implementar abas "Imperfeição", "Análise" e "Resultados" em `TopToolbar.cpp`.
-- [ ] Implementar handlers em `Application.cpp` para tratar os requests da UI.
+- [x] Adicionar `AnalysisRequest` e `ResultsViewRequest` em `FrameRequests.h`.
+- [x] Implementar abas "Imperfeição", "Análise" e "Resultados" em `TopToolbar.cpp`.
+- [x] Implementar handlers em `Application.cpp` para tratar os requests da UI.
 
 ## Fase 2: Infraestrutura de Análise (`src/analysis/`) 🧬
 - [ ] Definir `AnalysisOptions.h` e `AnalysisResult.h`.

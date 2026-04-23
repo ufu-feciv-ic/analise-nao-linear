@@ -207,6 +207,24 @@ void TopToolbar::FillRequests(
             ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("Imperfeições"))
+        {
+            DrawImperfectionTab(requests, projectDocument, editorState);
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Análise"))
+        {
+            DrawAnalysisTab(requests, projectDocument, editorState);
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Resultados"))
+        {
+            DrawResultsTab(requests, projectDocument, editorState);
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 
@@ -1939,6 +1957,83 @@ void TopToolbar::DrawPropertiesTab(FrameRequests& requests, ProjectDocument& pro
     ToolbarSection::VerticalSeparator();
 
     return;
+}
+
+void TopToolbar::DrawImperfectionTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState)
+{
+    ToolbarSection::BeginSection("ImperfectionSection", 200.0f);
+    ImGui::TextUnformatted("Configurações de");
+    ImGui::TextUnformatted("Imperfeição Inicial");
+    ToolbarSection::PushTitleToBottom("Imperfeições");
+    ToolbarSection::EndSection("Imperfeições");
+    ToolbarSection::VerticalSeparator();
+}
+
+void TopToolbar::DrawAnalysisTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState)
+{
+    ToolbarSection::BeginSection("SolverSection", 200.0f);
+    
+    const float buttonHeight = ToolbarSection::ClampFullHeightButtonHeight(ToolbarSection::GetButtonHeight("Executar"));
+    
+    if (ImGui::Button("Linear", ImVec2(buttonWidth, buttonHeight)))
+    {
+        requests.analysis.active = true;
+        requests.analysis.type = AnalysisType::Linear;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Não-Linear", ImVec2(buttonWidth, buttonHeight)))
+    {
+        requests.analysis.active = true;
+        requests.analysis.type = AnalysisType::NonLinear;
+    }
+
+    ToolbarSection::PushTitleToBottom("Executar");
+    ToolbarSection::EndSection("Executar");
+    ToolbarSection::VerticalSeparator();
+}
+
+void TopToolbar::DrawResultsTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState)
+{
+    ToolbarSection::BeginSection("ResultsViewSection", 300.0f);
+    
+    static ResultsViewType currentType = ResultsViewType::None;
+    static float currentScale = 1.0f;
+
+    const char* typeLabels[] = { "Nenhum", "Deformada", "Normal (N)", "Cortante (V)", "Momento (M)" };
+    const ResultsViewType types[] = { 
+        ResultsViewType::None, 
+        ResultsViewType::Deformed, 
+        ResultsViewType::AxialForce, 
+        ResultsViewType::ShearForce, 
+        ResultsViewType::BendingMoment 
+    };
+
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::BeginCombo("Tipo", typeLabels[static_cast<int>(currentType)]))
+    {
+        for (int i = 0; i < 5; ++i)
+        {
+            if (ImGui::Selectable(typeLabels[i], currentType == types[i]))
+            {
+                currentType = types[i];
+                requests.resultsView.active = true;
+                requests.resultsView.type = currentType;
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::SliderFloat("Escala", &currentScale, 0.1f, 100.0f, "%.1f"))
+    {
+        requests.resultsView.active = true;
+        requests.resultsView.type = currentType;
+        requests.resultsView.scale = currentScale;
+    }
+
+    ToolbarSection::PushTitleToBottom("Visualização");
+    ToolbarSection::EndSection("Visualização");
+    ToolbarSection::VerticalSeparator();
 }
 
 

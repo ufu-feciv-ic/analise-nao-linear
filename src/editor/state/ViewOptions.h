@@ -1,6 +1,7 @@
 #pragma once
 
 #include <raylib.h>
+#include "editor/AnalysisTypes.h"
 
 struct ViewOptions
 {
@@ -29,6 +30,9 @@ struct ViewOptions
     float pointLoadForceSliderLimitPixels = 150.0f;
     float pointLoadMomentSliderLimitPixels = 150.0f;
     float distributedLoadSliderLimitPixels = 150.0f;
+
+    ResultsViewType resultsViewType = ResultsViewType::None;
+    float resultsScale = 1.0f;
 
     bool showBeamRenderTestWindow = true;
     float beamRenderFillThickness = 6.5f;

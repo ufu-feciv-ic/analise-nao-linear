@@ -18,6 +18,8 @@ void Application::ApplyFrameEdits(
     ApplyDimensionEditRequest(requests.dimensionEdit);
     ApplyDimensionToolStateSyncRequest(requests.dimensionToolStateSync);
     ApplyLoadToolStateSyncRequest(requests.loadToolStateSync);
+    ApplyAnalysisRequest(requests.analysis);
+    ApplyResultsViewRequest(requests.resultsView);
 }
 
 void Application::ApplyDialogResults(const AppDialogResults& results)
@@ -185,4 +187,26 @@ void Application::ApplyLoadToolStateSyncRequest(const FrameRequests::LoadToolSta
         editor.state.loadTool.distributedLoadPanelSelectionTokenInitialized =
             request.distributedLoadPanelSelectionTokenInitialized;
     }
+}
+
+void Application::ApplyAnalysisRequest(const FrameRequests::AnalysisRequest& request)
+{
+    if (!request.active)
+    {
+        return;
+    }
+
+    TraceLog(LOG_INFO, "Solicitação de Análise: %s", 
+        request.type == AnalysisType::Linear ? "Linear" : "Não-Linear");
+}
+
+void Application::ApplyResultsViewRequest(const FrameRequests::ResultsViewRequest& request)
+{
+    if (!request.active)
+    {
+        return;
+    }
+
+    editor.state.view.resultsViewType = request.type;
+    editor.state.view.resultsScale = request.scale;
 }

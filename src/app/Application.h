@@ -53,6 +53,8 @@ private:
     void ApplyDimensionEditRequest(const FrameRequests::DimensionSelectionEditRequest& request);
     void ApplyDimensionToolStateSyncRequest(const FrameRequests::DimensionToolStateSyncRequest& request);
     void ApplyLoadToolStateSyncRequest(const FrameRequests::LoadToolStateSyncRequest& request);
+    void ApplyAnalysisRequest(const FrameRequests::AnalysisRequest& request);
+    void ApplyResultsViewRequest(const FrameRequests::ResultsViewRequest& request);
     void DrawBeamRenderTestWindow();
 
 private:

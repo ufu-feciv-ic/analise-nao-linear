@@ -21,4 +21,7 @@ private:
         float cameraZoom);
     void DrawLoadsTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState);
     void DrawPropertiesTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState);
+    void DrawImperfectionTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState);
+    void DrawAnalysisTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState);
+    void DrawResultsTab(FrameRequests& requests, ProjectDocument& projectDocument, EditorState& editorState);
 };

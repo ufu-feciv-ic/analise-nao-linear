@@ -8,6 +8,7 @@
 #include "model/DistributedLoad.h"
 #include "model/Node.h"
 #include "ui/ToolbarDialogRequest.h"
+#include "editor/AnalysisTypes.h"
 
 enum class EditorRequest
 {
@@ -47,6 +48,19 @@ enum class DocumentRequest
 
 struct FrameRequests
 {
+    struct AnalysisRequest
+    {
+        bool active = false;
+        AnalysisType type = AnalysisType::Linear;
+    };
+
+    struct ResultsViewRequest
+    {
+        bool active = false;
+        ResultsViewType type = ResultsViewType::None;
+        float scale = 1.0f;
+    };
+
     struct NodalLoadSelectionEditRequest
     {
         bool active = false;
@@ -143,4 +157,6 @@ struct FrameRequests
     DimensionSelectionEditRequest dimensionEdit;
     DimensionToolStateSyncRequest dimensionToolStateSync;
     LoadToolStateSyncRequest loadToolStateSync;
+    AnalysisRequest analysis;
+    ResultsViewRequest resultsView;
 };
