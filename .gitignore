@@ -1,0 +1,9 @@
+build/
+obj/
+
+.vscode/
+imgui.ini
+
+*.user
+*.suo
+*.tmp
