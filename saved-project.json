@@ -1,0 +1,428 @@
+{
+  "name": "Novo Projeto",
+  "appVersion": "0.3.0",
+  "projectFileFormatVersion": 1,
+  "unitSystem": 0,
+  "displayUnits": {
+    "length": 1,
+    "force": 1,
+    "moment": 1,
+    "distributedLoad": 1,
+    "stress": 1,
+    "elasticModulus": 2,
+    "area": 1,
+    "inertia": 1
+  },
+  "nextIds": {
+    "node": 204,
+    "beam": 257,
+    "distributedLoad": 40,
+    "dimension": 1,
+    "material": 3,
+    "section": 3
+  },
+  "nodes": [
+    {
+      "id": 189,
+      "x": 0.0,
+      "y": -0.0,
+      "support": 4,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 190,
+      "x": 0.0,
+      "y": -3.0,
+      "support": 0,
+      "load": {
+        "fx": 1000.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 191,
+      "x": 4.0,
+      "y": -3.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 192,
+      "x": 4.0,
+      "y": 0.0,
+      "support": 4,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 193,
+      "x": 0.0,
+      "y": -6.0,
+      "support": 0,
+      "load": {
+        "fx": 1000.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 194,
+      "x": 4.0,
+      "y": -6.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 195,
+      "x": 0.0,
+      "y": -9.0,
+      "support": 0,
+      "load": {
+        "fx": 1000.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 196,
+      "x": 4.0,
+      "y": -9.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 197,
+      "x": 0.0,
+      "y": -12.0,
+      "support": 0,
+      "load": {
+        "fx": 1000.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 198,
+      "x": 4.0,
+      "y": -12.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 199,
+      "x": 8.0,
+      "y": -3.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 200,
+      "x": 8.0,
+      "y": 0.0,
+      "support": 4,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 201,
+      "x": 8.0,
+      "y": -6.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 202,
+      "x": 8.0,
+      "y": -9.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    },
+    {
+      "id": 203,
+      "x": 8.0,
+      "y": -12.0,
+      "support": 0,
+      "load": {
+        "fx": 0.0,
+        "fy": 0.0,
+        "mz": 0.0
+      }
+    }
+  ],
+  "beams": [
+    {
+      "id": 237,
+      "startNodeId": 189,
+      "endNodeId": 190,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 238,
+      "startNodeId": 190,
+      "endNodeId": 191,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 239,
+      "startNodeId": 192,
+      "endNodeId": 191,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 240,
+      "startNodeId": 190,
+      "endNodeId": 193,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 241,
+      "startNodeId": 193,
+      "endNodeId": 194,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 242,
+      "startNodeId": 191,
+      "endNodeId": 194,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 243,
+      "startNodeId": 193,
+      "endNodeId": 195,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 244,
+      "startNodeId": 195,
+      "endNodeId": 196,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 245,
+      "startNodeId": 194,
+      "endNodeId": 196,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 246,
+      "startNodeId": 195,
+      "endNodeId": 197,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 247,
+      "startNodeId": 197,
+      "endNodeId": 198,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 248,
+      "startNodeId": 196,
+      "endNodeId": 198,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 249,
+      "startNodeId": 191,
+      "endNodeId": 199,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 250,
+      "startNodeId": 200,
+      "endNodeId": 199,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 251,
+      "startNodeId": 194,
+      "endNodeId": 201,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 252,
+      "startNodeId": 199,
+      "endNodeId": 201,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 253,
+      "startNodeId": 196,
+      "endNodeId": 202,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 254,
+      "startNodeId": 201,
+      "endNodeId": 202,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 255,
+      "startNodeId": 198,
+      "endNodeId": 203,
+      "materialId": 1,
+      "sectionId": 1
+    },
+    {
+      "id": 256,
+      "startNodeId": 202,
+      "endNodeId": 203,
+      "materialId": 1,
+      "sectionId": 1
+    }
+  ],
+  "distributedLoads": [
+    {
+      "id": 32,
+      "beamId": 238,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 33,
+      "beamId": 241,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 34,
+      "beamId": 244,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 35,
+      "beamId": 247,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 36,
+      "beamId": 249,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 37,
+      "beamId": 251,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 38,
+      "beamId": 253,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    },
+    {
+      "id": 39,
+      "beamId": 255,
+      "qxStart": 0.0,
+      "qyStart": -10000.0,
+      "qxEnd": 0.0,
+      "qyEnd": -10000.0
+    }
+  ],
+  "dimensions": [],
+  "materials": [
+    {
+      "id": 1,
+      "name": "Concreto",
+      "youngModulus": 30000000000.0,
+      "thermalExpansion": 0.00001
+    },
+    {
+      "id": 2,
+      "name": "Aço",
+      "youngModulus": 200000000000.0,
+      "thermalExpansion": 0.000012
+    }
+  ],
+  "sections": [
+    {
+      "id": 1,
+      "name": "Seção 20x40 cm",
+      "area": 0.08000000000000002,
+      "inertia": 0.001066666666666667
+    },
+    {
+      "id": 2,
+      "name": "Perfil tubular",
+      "area": 0.012,
+      "inertia": 0.000025
+    }
+  ]
+}
